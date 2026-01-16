@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MapPin, Calculator, DollarSign, Save, Trash2, History, Anchor, ArrowRight, Truck, Car } from 'lucide-react';
 
 // --- DATA MOCKUP BASED ON FULL USER CSV SNIPPETS + INTERPOLATED DATA ---
@@ -410,25 +410,8 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [animateTotal, setAnimateTotal] = useState(false);
 
-  // Set Favicon
-  useEffect(() => {
-    const link = document.createElement('link');
-    link.rel = 'icon';
-    // Car SVG encoded for favicon
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23FFCC33" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
-        <circle cx="7" cy="17" r="2" />
-        <circle cx="17" cy="17" r="2" />
-      </svg>
-    `;
-    link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
-    document.head.appendChild(link);
-
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, []);
+  // Set Favicon - Improved logic
+  
 
   // Save Settings to LocalStorage whenever they change
   useEffect(() => {
