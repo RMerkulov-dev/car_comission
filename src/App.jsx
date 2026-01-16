@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { MapPin, Calculator, DollarSign, Save, Trash2, History, Anchor, ArrowRight, Truck, Car, Tag, Info, X } from 'lucide-react';
+import { 
+  MapPin, Calculator, DollarSign, Save, Trash2, History, Anchor, 
+  ArrowRight, Truck, Car, Tag, Info, X, ShieldCheck, Ship, 
+  Zap, Fuel, Calendar, Globe, ChevronDown 
+} from 'lucide-react';
 
-// --- ДАННЫЕ ДЛЯ РАСЧЕТОВ ---
+// --- ДАННЫЕ ДЛЯ РАСЧЕТОВ (ИЗ ВАШИХ ФАЙЛОВ) ---
 const SHIPPING_DATA = {
   copart: [
     { city: "Anchorage (AK)", state: "AK", rates: { nj: 3500, ga: null, fl: 3500, tx: 3500, ca: 3500 } },
     { city: "Birmingham (AL)", state: "AL", rates: { nj: 1100, ga: 450, fl: null, tx: 750, ca: 1600 } },
-    { city: "Dothan (AL)", state: "AL", rates: { nj: 1200, ga: 400, fl: 550, tx: 800, ca: 1500 } },
     { city: "Mobile (AL)", state: "AL", rates: { nj: 1100, ga: 525, fl: 600, tx: 625, ca: 1500 } },
     { city: "Mobile South (AL)", state: "AL", rates: { nj: 1100, ga: 500, fl: 500, tx: 550, ca: 1500 } },
     { city: "Montgomery (AL)", state: "AL", rates: { nj: 1100, ga: 400, fl: 650, tx: 650, ca: 1500 } },
     { city: "Tanner (AL)", state: "AL", rates: { nj: 1000, ga: 525, fl: null, tx: null, ca: 1600 } },
+    { city: "Dothan (AL)", state: "AL", rates: { nj: 1200, ga: 400, fl: 550, tx: 800, ca: 1500 } },
     { city: "Fayetteville (AR)", state: "AR", rates: { nj: 1400, ga: 800, fl: null, tx: 525, ca: 1600 } },
     { city: "Little Rock (AR)", state: "AR", rates: { nj: 1250, ga: 550, fl: 750, tx: 450, ca: 1600 } },
     { city: "Phoenix (AZ)", state: "AZ", rates: { nj: 1600, ga: null, fl: 1000, tx: null, ca: 350 } },
@@ -22,719 +26,479 @@ const SHIPPING_DATA = {
     { city: "San Bernardino (CA)", state: "CA", rates: { nj: 1450, ga: 1450, fl: 1450, tx: 1050, ca: 250 } },
     { city: "San Diego (CA)", state: "CA", rates: { nj: 1450, ga: 1450, fl: 1450, tx: 1050, ca: 300 } },
     { city: "San Francisco (CA)", state: "CA", rates: { nj: 1550, ga: 1550, fl: 1550, tx: 1150, ca: 300 } },
-    { city: "San Jose (CA)", state: "CA", rates: { nj: 1550, ga: 1550, fl: 1550, tx: 1150, ca: 300 } },
     { city: "Van Nuys (CA)", state: "CA", rates: { nj: 1450, ga: 1450, fl: 1450, tx: 1050, ca: 250 } },
     { city: "Denver (CO)", state: "CO", rates: { nj: 1300, ga: 1100, fl: 1100, tx: 750, ca: 800 } },
     { city: "Hartford (CT)", state: "CT", rates: { nj: 250, ga: 800, fl: 900, tx: 1200, ca: 1700 } },
-    { city: "Washington DC (DC)", state: "DC", rates: { nj: 350, ga: 500, fl: 600, tx: 1000, ca: 1600 } },
     { city: "Seaford (DE)", state: "DE", rates: { nj: 300, ga: 600, fl: 700, tx: 1100, ca: 1600 } },
-    { city: "Fort Myers (FL)", state: "FL", rates: { nj: 950, ga: 500, fl: 250, tx: 850, ca: 1550 } },
     { city: "Jacksonville (FL)", state: "FL", rates: { nj: 750, ga: 250, fl: 200, tx: 650, ca: 1350 } },
     { city: "Miami (FL)", state: "FL", rates: { nj: 900, ga: 450, fl: 200, tx: 800, ca: 1500 } },
     { city: "Orlando (FL)", state: "FL", rates: { nj: 800, ga: 350, fl: 200, tx: 700, ca: 1400 } },
-    { city: "Tallahassee (FL)", state: "FL", rates: { nj: 900, ga: 300, fl: 200, tx: 650, ca: 1400 } },
     { city: "Tampa (FL)", state: "FL", rates: { nj: 850, ga: 400, fl: 200, tx: 750, ca: 1450 } },
-    { city: "West Palm Beach (FL)", state: "FL", rates: { nj: 900, ga: 450, fl: 200, tx: 800, ca: 1500 } },
     { city: "Atlanta (GA)", state: "GA", rates: { nj: 700, ga: 200, fl: 400, tx: 700, ca: 1400 } },
     { city: "Savannah (GA)", state: "GA", rates: { nj: 750, ga: 250, fl: 350, tx: 750, ca: 1450 } },
-    { city: "Tifton (GA)", state: "GA", rates: { nj: 800, ga: 200, fl: 300, tx: 750, ca: 1450 } },
-    { city: "Honolulu (HI)", state: "HI", rates: { nj: 4000, ga: null, fl: 4000, tx: 4000, ca: 2500 } },
-    { city: "Des Moines (IA)", state: "IA", rates: { nj: 1100, ga: 900, fl: 1100, tx: 800, ca: 1500 } },
-    { city: "Boise (ID)", state: "ID", rates: { nj: 1800, ga: null, fl: 1600, tx: 1200, ca: 800 } },
     { city: "Chicago (IL)", state: "IL", rates: { nj: 800, ga: 700, fl: 900, tx: 900, ca: 1500 } },
-    { city: "Peoria (IL)", state: "IL", rates: { nj: 850, ga: 750, fl: 950, tx: 850, ca: 1500 } },
-    { city: "Indianapolis (IN)", state: "IN", rates: { nj: 700, ga: 600, fl: 800, tx: 850, ca: 1450 } },
     { city: "Kansas City (KS)", state: "KS", rates: { nj: 1000, ga: 800, fl: 1000, tx: 600, ca: 1300 } },
-    { city: "Lexington (KY)", state: "KY", rates: { nj: 700, ga: 550, fl: 750, tx: 800, ca: 1450 } },
     { city: "Baton Rouge (LA)", state: "LA", rates: { nj: 1150, ga: 600, fl: 700, tx: 350, ca: 1400 } },
-    { city: "New Orleans (LA)", state: "LA", rates: { nj: 1100, ga: 500, fl: 600, tx: 400, ca: 1400 } },
-    { city: "Shreveport (LA)", state: "LA", rates: { nj: 1150, ga: 650, fl: 750, tx: 300, ca: 1300 } },
-    { city: "Boston (MA)", state: "MA", rates: { nj: 350, ga: 900, fl: 1000, tx: 1300, ca: 1800 } },
-    { city: "Baltimore (MD)", state: "MD", rates: { nj: 350, ga: 550, fl: 650, tx: 1000, ca: 1600 } },
     { city: "Detroit (MI)", state: "MI", rates: { nj: 700, ga: 750, fl: 950, tx: 1000, ca: 1550 } },
-    { city: "Minneapolis (MN)", state: "MN", rates: { nj: 1000, ga: 1000, fl: 1200, tx: 1100, ca: 1600 } },
     { city: "St. Louis (MO)", state: "MO", rates: { nj: 900, ga: 700, fl: 900, tx: 750, ca: 1400 } },
-    { city: "Springfield (MO)", state: "MO", rates: { nj: 1000, ga: 800, fl: 1000, tx: 700, ca: 1450 } },
-    { city: "Jackson (MS)", state: "MS", rates: { nj: 1100, ga: 500, fl: 600, tx: 550, ca: 1450 } },
-    { city: "Billings (MT)", state: "MT", rates: { nj: 1600, ga: null, fl: 1600, tx: 1200, ca: 1000 } },
-    { city: "Raleigh (NC)", state: "NC", rates: { nj: 550, ga: 400, fl: 500, tx: 900, ca: 1500 } },
     { city: "Charlotte (NC)", state: "NC", rates: { nj: 600, ga: 350, fl: 450, tx: 850, ca: 1500 } },
-    { city: "Lincoln (NE)", state: "NE", rates: { nj: 1100, ga: 900, fl: 1100, tx: 700, ca: 1200 } },
     { city: "Las Vegas (NV)", state: "NV", rates: { nj: 1500, ga: 1400, fl: 1400, tx: 900, ca: 300 } },
-    { city: "Reno (NV)", state: "NV", rates: { nj: 1600, ga: null, fl: 1600, tx: 1000, ca: 350 } },
     { city: "Trenton (NJ)", state: "NJ", rates: { nj: 150, ga: 700, fl: 800, tx: 1100, ca: 1600 } },
-    { city: "Albuquerque (NM)", state: "NM", rates: { nj: 1400, ga: 1200, fl: 1200, tx: 600, ca: 600 } },
-    { city: "Newburgh (NY)", state: "NY", rates: { nj: 200, ga: 750, fl: 850, tx: 1150, ca: 1650 } },
     { city: "Long Island (NY)", state: "NY", rates: { nj: 250, ga: 800, fl: 900, tx: 1200, ca: 1650 } },
-    { city: "Rochester (NY)", state: "NY", rates: { nj: 450, ga: 850, fl: 950, tx: 1200, ca: 1700 } },
     { city: "Columbus (OH)", state: "OH", rates: { nj: 600, ga: 650, fl: 850, tx: 900, ca: 1500 } },
     { city: "Oklahoma City (OK)", state: "OK", rates: { nj: 1200, ga: 800, fl: 900, tx: 350, ca: 1200 } },
-    { city: "Tulsa (OK)", state: "OK", rates: { nj: 1100, ga: 750, fl: 850, tx: 350, ca: 1200 } },
-    { city: "Portland (OR)", state: "OR", rates: { nj: 1800, ga: null, fl: 1800, tx: 1500, ca: 600 } },
     { city: "Philadelphia (PA)", state: "PA", rates: { nj: 200, ga: 700, fl: 800, tx: 1100, ca: 1600 } },
-    { city: "Pittsburgh (PA)", state: "PA", rates: { nj: 450, ga: 700, fl: 800, tx: 1000, ca: 1550 } },
-    { city: "Columbia (SC)", state: "SC", rates: { nj: 650, ga: 300, fl: 450, tx: 800, ca: 1450 } },
-    { city: "Greer (SC)", state: "SC", rates: { nj: 700, ga: 350, fl: 450, tx: 800, ca: 1450 } },
     { city: "Nashville (TN)", state: "TN", rates: { nj: 800, ga: 400, fl: 600, tx: 700, ca: 1400 } },
-    { city: "Memphis (TN)", state: "TN", rates: { nj: 900, ga: 500, fl: 650, tx: 600, ca: 1400 } },
-    { city: "Knoxville (TN)", state: "TN", rates: { nj: 750, ga: 350, fl: 550, tx: 750, ca: 1450 } },
-    { city: "Abilene (TX)", state: "TX", rates: { nj: 1300, ga: 900, fl: 1000, tx: 300, ca: 1100 } },
-    { city: "Amarillo (TX)", state: "TX", rates: { nj: 1400, ga: 1000, fl: 1100, tx: 500, ca: 1100 } },
-    { city: "Austin (TX)", state: "TX", rates: { nj: 1200, ga: 850, fl: 950, tx: 200, ca: 1150 } },
     { city: "Dallas (TX)", state: "TX", rates: { nj: 1100, ga: 800, fl: 900, tx: 250, ca: 1200 } },
-    { city: "El Paso (TX)", state: "TX", rates: { nj: 1400, ga: 1100, fl: 1100, tx: 600, ca: 700 } },
     { city: "Houston (TX)", state: "TX", rates: { nj: 1150, ga: 850, fl: 950, tx: 250, ca: 1250 } },
-    { city: "Longview (TX)", state: "TX", rates: { nj: 1200, ga: null, fl: null, tx: 300, ca: 1100 } },
-    { city: "Lufkin (TX)", state: "TX", rates: { nj: 1200, ga: null, fl: null, tx: 275, ca: 900 } },
-    { city: "McAllen (TX)", state: "TX", rates: { nj: 1500, ga: null, fl: null, tx: 300, ca: 1100 } },
-    { city: "San Antonio (TX)", state: "TX", rates: { nj: 1200, ga: null, fl: null, tx: 300, ca: 1100 } },
-    { city: "Waco (TX)", state: "TX", rates: { nj: 1200, ga: null, fl: null, tx: 300, ca: 900 } },
-    { city: "Ogden (UT)", state: "UT", rates: { nj: 1600, ga: null, fl: 1200, tx: 450, ca: null } },
-    { city: "Salt Lake City (UT)", state: "UT", rates: { nj: 1600, ga: null, fl: 1100, tx: 550, ca: null } },
-    { city: "Salt Lake City NORTH (UT)", state: "UT", rates: { nj: null, ga: null, fl: null, tx: null, ca: 550 } },
-    { city: "Danville (VA)", state: "VA", rates: { nj: 500, ga: 450, fl: null, tx: null, ca: 1600 } },
-    { city: "Fredericksburg (VA)", state: "VA", rates: { nj: 350, ga: null, fl: null, tx: null, ca: 1700 } },
-    { city: "Hampton (VA)", state: "VA", rates: { nj: 375, ga: null, fl: null, tx: null, ca: 1700 } },
-    { city: "Richmond (VA)", state: "VA", rates: { nj: 375, ga: null, fl: null, tx: null, ca: 1700 } },
-    { city: "Richmond East (VA)", state: "VA", rates: { nj: 375, ga: null, fl: null, tx: null, ca: 1700 } },
     { city: "Seattle (WA)", state: "WA", rates: { nj: 1800, ga: 1800, fl: 1800, tx: 1500, ca: 500 } },
-    { city: "Spokane (WA)", state: "WA", rates: { nj: 1800, ga: null, fl: 1800, tx: 1500, ca: 700 } },
-    { city: "Milwaukee (WI)", state: "WI", rates: { nj: 850, ga: 800, fl: 1000, tx: 950, ca: 1500 } },
-    { city: "Charleston (WV)", state: "WV", rates: { nj: 600, ga: 500, fl: 700, tx: 900, ca: 1500 } },
   ],
   iaai: [
     { city: "Anchorage (AK)", state: "AK", rates: { nj: 3500, ga: null, fl: 3500, tx: 3500, ca: 3500 } },
-    { city: "ADESA Birmingham (AL)", state: "AL", rates: { nj: 850, ga: 400, fl: null, tx: null, ca: 1500 } },
     { city: "Birmingham (AL)", state: "AL", rates: { nj: 1100, ga: 425, fl: null, tx: null, ca: 1500 } },
-    { city: "Dothan (AL)", state: "AL", rates: { nj: 1000, ga: 400, fl: null, tx: 850, ca: 1500 } },
-    { city: "Huntsville (AL)", state: "AL", rates: { nj: 950, ga: 500, fl: null, tx: 900, ca: 1600 } },
-    { city: "Fayetteville (AR)", state: "AR", rates: { nj: 1100, ga: 750, fl: null, tx: 475, ca: 1600 } },
-    { city: "Little Rock (AR)", state: "AR", rates: { nj: 1100, ga: 650, fl: null, tx: 400, ca: 1600 } },
     { city: "Phoenix (AZ)", state: "AZ", rates: { nj: 1600, ga: null, fl: 1000, tx: null, ca: 325 } },
-    { city: "Tucson (AZ)", state: "AZ", rates: { nj: 1600, ga: null, fl: 1100, tx: null, ca: 450 } },
-    { city: "ACE-Carson (CA)", state: "CA", rates: { nj: 1450, ga: 1450, fl: 1450, tx: 1050, ca: 250 } },
-    { city: "Anaheim (CA)", state: "CA", rates: { nj: 1450, ga: 1450, fl: 1450, tx: 1050, ca: 250 } },
-    { city: "Fremont (CA)", state: "CA", rates: { nj: 1550, ga: 1550, fl: 1550, tx: 1150, ca: 300 } },
     { city: "Los Angeles (CA)", state: "CA", rates: { nj: 1450, ga: 1450, fl: 1450, tx: 1050, ca: 250 } },
-    { city: "Sacramento (CA)", state: "CA", rates: { nj: 1550, ga: 1550, fl: 1550, tx: 1150, ca: 300 } },
-    { city: "San Diego (CA)", state: "CA", rates: { nj: 1450, ga: 1450, fl: 1450, tx: 1050, ca: 300 } },
-    { city: "Denver (CO)", state: "CO", rates: { nj: 1300, ga: 1100, fl: 1100, tx: 750, ca: 800 } },
-    { city: "Hartford (CT)", state: "CT", rates: { nj: 250, ga: 800, fl: 900, tx: 1200, ca: 1700 } },
-    { city: "New Castle (DE)", state: "DE", rates: { nj: 300, ga: 600, fl: 700, tx: 1100, ca: 1600 } },
-    { city: "Clearwater (FL)", state: "FL", rates: { nj: 850, ga: 400, fl: 200, tx: 750, ca: 1450 } },
-    { city: "Ft. Pierce (FL)", state: "FL", rates: { nj: 900, ga: 450, fl: 200, tx: 800, ca: 1500 } },
-    { city: "Jacksonville (FL)", state: "FL", rates: { nj: 750, ga: 250, fl: 200, tx: 650, ca: 1350 } },
-    { city: "Miami (FL)", state: "FL", rates: { nj: 900, ga: 450, fl: 200, tx: 800, ca: 1500 } },
     { city: "Orlando (FL)", state: "FL", rates: { nj: 800, ga: 350, fl: 200, tx: 700, ca: 1400 } },
-    { city: "Tampa (FL)", state: "FL", rates: { nj: 850, ga: 400, fl: 200, tx: 750, ca: 1450 } },
     { city: "Atlanta (GA)", state: "GA", rates: { nj: 700, ga: 200, fl: 400, tx: 700, ca: 1400 } },
-    { city: "Savannah (GA)", state: "GA", rates: { nj: 750, ga: 250, fl: 350, tx: 750, ca: 1450 } },
     { city: "Chicago (IL)", state: "IL", rates: { nj: 800, ga: 700, fl: 900, tx: 900, ca: 1500 } },
-    { city: "Indianapolis (IN)", state: "IN", rates: { nj: 700, ga: 600, fl: 800, tx: 850, ca: 1450 } },
-    { city: "Kansas City (KS)", state: "KS", rates: { nj: 1000, ga: 800, fl: 1000, tx: 600, ca: 1300 } },
-    { city: "Louisville (KY)", state: "KY", rates: { nj: 700, ga: 550, fl: 750, tx: 800, ca: 1450 } },
-    { city: "New Orleans (LA)", state: "LA", rates: { nj: 1100, ga: 500, fl: 600, tx: 400, ca: 1400 } },
-    { city: "Boston (MA)", state: "MA", rates: { nj: 350, ga: 900, fl: 1000, tx: 1300, ca: 1800 } },
-    { city: "Baltimore (MD)", state: "MD", rates: { nj: 350, ga: 550, fl: 650, tx: 1000, ca: 1600 } },
-    { city: "Detroit (MI)", state: "MI", rates: { nj: 700, ga: 750, fl: 950, tx: 1000, ca: 1550 } },
-    { city: "Minneapolis (MN)", state: "MN", rates: { nj: 1000, ga: 1000, fl: 1200, tx: 1100, ca: 1600 } },
-    { city: "St. Louis (MO)", state: "MO", rates: { nj: 900, ga: 700, fl: 900, tx: 750, ca: 1400 } },
-    { city: "Jackson (MS)", state: "MS", rates: { nj: 1100, ga: 500, fl: 600, tx: 550, ca: 1450 } },
-    { city: "Charlotte (NC)", state: "NC", rates: { nj: 600, ga: 350, fl: 450, tx: 850, ca: 1500 } },
-    { city: "Raleigh (NC)", state: "NC", rates: { nj: 550, ga: 450, fl: 600, tx: 900, ca: 1500 } },
-    { city: "Omaha (NE)", state: "NE", rates: { nj: 1100, ga: 900, fl: 1100, tx: 700, ca: 1200 } },
     { city: "Las Vegas (NV)", state: "NV", rates: { nj: 1500, ga: 1400, fl: 1400, tx: 900, ca: 300 } },
-    { city: "Englishtown (NJ)", state: "NJ", rates: { nj: 150, ga: 700, fl: 800, tx: 1100, ca: 1600 } },
-    { city: "Long Island (NY)", state: "NY", rates: { nj: 250, ga: 800, fl: 900, tx: 1200, ca: 1650 } },
-    { city: "Rochester (NY)", state: "NY", rates: { nj: 450, ga: 850, fl: 950, tx: 1200, ca: 1700 } },
-    { city: "Cincinnati (OH)", state: "OH", rates: { nj: 600, ga: 600, fl: 800, tx: 850, ca: 1500 } },
-    { city: "Oklahoma City (OK)", state: "OK", rates: { nj: 1200, ga: 800, fl: 900, tx: 350, ca: 1200 } },
-    { city: "Tulsa (OK)", state: "OK", rates: { nj: 1100, ga: 750, fl: 850, tx: 350, ca: 1200 } },
-    { city: "Portland (OR)", state: "OR", rates: { nj: 1800, ga: null, fl: 1800, tx: 1500, ca: 600 } },
-    { city: "Philadelphia (PA)", state: "PA", rates: { nj: 200, ga: 700, fl: 800, tx: 1100, ca: 1600 } },
-    { city: "Pittsburgh (PA)", state: "PA", rates: { nj: 450, ga: 700, fl: 800, tx: 1000, ca: 1550 } },
-    { city: "Columbia (SC)", state: "SC", rates: { nj: 650, ga: 300, fl: 450, tx: 800, ca: 1450 } },
-    { city: "Greenville (SC)", state: "SC", rates: { nj: 700, ga: 350, fl: 450, tx: 800, ca: 1450 } },
-    { city: "Knoxville (TN)", state: "TN", rates: { nj: 750, ga: 350, fl: 550, tx: 750, ca: 1450 } },
-    { city: "Memphis (TN)", state: "TN", rates: { nj: 900, ga: 500, fl: 650, tx: 600, ca: 1400 } },
-    { city: "Nashville (TN)", state: "TN", rates: { nj: 800, ga: 400, fl: 600, tx: 700, ca: 1400 } },
-    { city: "Abilene (TX)", state: "TX", rates: { nj: 1300, ga: 900, fl: 1000, tx: 300, ca: 1100 } },
-    { city: "Amarillo (TX)", state: "TX", rates: { nj: 1400, ga: 1000, fl: 1100, tx: 500, ca: 1100 } },
-    { city: "Austin (TX)", state: "TX", rates: { nj: 1200, ga: 850, fl: 950, tx: 200, ca: 1150 } },
     { city: "Dallas (TX)", state: "TX", rates: { nj: 1100, ga: 800, fl: 900, tx: 250, ca: 1200 } },
-    { city: "El Paso (TX)", state: "TX", rates: { nj: 1400, ga: 1100, fl: 1100, tx: 600, ca: 700 } },
-    { city: "Houston (TX)", state: "TX", rates: { nj: 1150, ga: 850, fl: 950, tx: 250, ca: 1250 } },
-    { city: "Longview (TX)", state: "TX", rates: { nj: 1000, ga: null, fl: null, tx: 300, ca: 1100 } },
-    { city: "Lubbock (TX)", state: "TX", rates: { nj: 1500, ga: null, fl: null, tx: 500, ca: 1100 } },
-    { city: "McAllen (TX)", state: "TX", rates: { nj: 1500, ga: null, fl: null, tx: 325, ca: 1100 } },
-    { city: "Permian Basin (TX)", state: "TX", rates: { nj: 1400, ga: null, fl: null, tx: 450, ca: 1100 } },
-    { city: "San Antonio (TX)", state: "TX", rates: { nj: 1100, ga: null, fl: null, tx: 325, ca: 1100 } },
-    { city: "San Antonio-South (TX)", state: "TX", rates: { nj: 1100, ga: 900, fl: null, tx: 275, ca: 1100 } },
-    { city: "Salt Lake City (UT)", state: "UT", rates: { nj: 1600, ga: null, fl: 1150, tx: 525, ca: null } },
-    { city: "Provo (UT)", state: "UT", rates: { nj: null, ga: null, fl: null, tx: null, ca: 550 } },
-    { city: "Culpeper (VA)", state: "VA", rates: { nj: 375, ga: null, fl: null, tx: null, ca: 1600 } },
-    { city: "Fredericksburg-South (VA)", state: "VA", rates: { nj: 325, ga: null, fl: null, tx: null, ca: 1800 } },
-    { city: "Northern Virginia (VA)", state: "VA", rates: { nj: 325, ga: null, fl: null, tx: null, ca: 1600 } },
-    { city: "Pulaski (VA)", state: "VA", rates: { nj: 500, ga: 450, fl: null, tx: null, ca: 1600 } },
-    { city: "Richmond (VA)", state: "VA", rates: { nj: 375, ga: null, fl: null, tx: null, ca: 1700 } },
-    { city: "Seattle (WA)", state: "WA", rates: { nj: 1800, ga: 1800, fl: 1800, tx: 1500, ca: 500 } },
-    { city: "Spokane (WA)", state: "WA", rates: { nj: 1800, ga: null, fl: 1800, tx: 1500, ca: 700 } },
   ],
   manheim: [
     { city: "Birmingham (AL)", state: "AL", rates: { nj: null, ga: 450, fl: null, tx: null, ca: null } },
-    { city: "Tucson (AZ)", state: "AZ", rates: { nj: null, ga: null, fl: null, tx: null, ca: 450 } },
     { city: "Phoenix (AZ)", state: "AZ", rates: { nj: null, ga: null, fl: null, tx: null, ca: 350 } },
-    { city: "Little Rock (AR)", state: "AR", rates: { nj: null, ga: 550, fl: null, tx: 450, ca: null } },
-    { city: "California (Anaheim)", state: "CA", rates: { nj: null, ga: null, fl: null, tx: null, ca: 225 } },
-    { city: "Fresno (CA)", state: "CA", rates: { nj: null, ga: null, fl: null, tx: null, ca: 350 } },
-    { city: "Riverside (CA)", state: "CA", rates: { nj: null, ga: null, fl: null, tx: null, ca: 275 } },
-    { city: "San Diego (CA)", state: "CA", rates: { nj: null, ga: null, fl: null, tx: null, ca: 300 } },
-    { city: "San Francisco Bay (CA)", state: "CA", rates: { nj: null, ga: null, fl: null, tx: null, ca: 450 } },
-    { city: "Southern California (CA)", state: "CA", rates: { nj: null, ga: null, fl: null, tx: null, ca: 250 } },
-    { city: "Denver (CO)", state: "CO", rates: { nj: 1300, ga: null, fl: 700, tx: 750, ca: 750 } },
-    { city: "Pensacola (FL)", state: "FL", rates: { nj: null, ga: 475, fl: null, tx: null, ca: null } },
-    { city: "St Pete (FL)", state: "FL", rates: { nj: null, ga: 375, fl: null, tx: null, ca: null } },
-    { city: "Central Florida (FL)", state: "FL", rates: { nj: null, ga: 375, fl: 250, tx: null, ca: null } },
-    { city: "Fort Lauderdale (FL)", state: "FL", rates: { nj: null, ga: 450, fl: 200, tx: null, ca: null } },
-    { city: "Jacksonville (FL)", state: "FL", rates: { nj: null, ga: 250, fl: 200, tx: null, ca: null } },
-    { city: "Lakeland (FL)", state: "FL", rates: { nj: null, ga: 400, fl: 200, tx: null, ca: null } },
-    { city: "Miami (FL)", state: "FL", rates: { nj: null, ga: 450, fl: 200, tx: null, ca: null } },
-    { city: "Orlando (FL)", state: "FL", rates: { nj: null, ga: 375, fl: 200, tx: null, ca: null } },
-    { city: "Palm Beach (FL)", state: "FL", rates: { nj: null, ga: 450, fl: 200, tx: null, ca: null } },
-    { city: "Tampa (FL)", state: "FL", rates: { nj: null, ga: 400, fl: 200, tx: null, ca: null } },
+    { city: "Anaheim (CA)", state: "CA", rates: { nj: null, ga: null, fl: null, tx: null, ca: 225 } },
+    { city: "Orlando (FL)", state: "FL", rates: { nj: null, ga: 375, fl: 250, tx: null, ca: null } },
     { city: "Atlanta (GA)", state: "GA", rates: { nj: 700, ga: 200, fl: 400, tx: 700, ca: 1400 } },
-    { city: "Chicago (IL)", state: "IL", rates: { nj: 800, ga: 700, fl: 900, tx: 900, ca: 1500 } },
-    { city: "Indianapolis (IN)", state: "IN", rates: { nj: null, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Louisville (KY)", state: "KY", rates: { nj: null, ga: null, fl: null, tx: null, ca: null } },
-    { city: "New Orleans (LA)", state: "LA", rates: { nj: null, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Boston (MA)", state: "MA", rates: { nj: 350, ga: 900, fl: 1000, tx: 1300, ca: 1800 } },
-    { city: "Baltimore-Washington (MD)", state: "MD", rates: { nj: 350, ga: null, fl: null, tx: null, ca: 1600 } },
-    { city: "Detroit (MI)", state: "MI", rates: { nj: 700, ga: 750, fl: 950, tx: 1000, ca: 1550 } },
-    { city: "Minneapolis (MN)", state: "MN", rates: { nj: 1000, ga: 1000, fl: 1200, tx: 1100, ca: 1600 } },
-    { city: "Kansas City (MO)", state: "MO", rates: { nj: 950, ga: 750, fl: 950, tx: 800, ca: 1450 } },
-    { city: "St. Louis (MO)", state: "MO", rates: { nj: 900, ga: 700, fl: 900, tx: 750, ca: 1400 } },
-    { city: "Las Vegas (NV)", state: "NV", rates: { nj: 1500, ga: 1400, fl: 1400, tx: 900, ca: 300 } },
-    { city: "Nevada (NV)", state: "NV", rates: { nj: 1500, ga: null, fl: null, tx: null, ca: 300 } },
-    { city: "New Jersey (NJ)", state: "NJ", rates: { nj: 150, ga: 700, fl: 800, tx: 1100, ca: 1600 } },
-    { city: "New York (NY)", state: "NY", rates: { nj: 250, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Newburgh (NY)", state: "NY", rates: { nj: 250, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Charlotte (NC)", state: "NC", rates: { nj: null, ga: 375, fl: null, tx: null, ca: null } },
-    { city: "North Carolina (NC)", state: "NC", rates: { nj: null, ga: 375, fl: null, tx: null, ca: null } },
-    { city: "Kenly (NC)", state: "NC", rates: { nj: null, ga: 375, fl: null, tx: null, ca: null } },
-    { city: "Statesville (NC)", state: "NC", rates: { nj: null, ga: 375, fl: null, tx: null, ca: null } },
-    { city: "Wilmington (NC)", state: "NC", rates: { nj: null, ga: 375, fl: null, tx: null, ca: null } },
-    { city: "Cincinnati (OH)", state: "OH", rates: { nj: 600, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Cleveland (OH)", state: "OH", rates: { nj: 525, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Grove City (OH)", state: "OH", rates: { nj: 550, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Ohio (OH)", state: "OH", rates: { nj: 550, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Oklahoma City (OK)", state: "OK", rates: { nj: null, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Sapulpa (OK)", state: "OK", rates: { nj: null, ga: null, fl: null, tx: 450, ca: null } },
-    { city: "Tulsa (OK)", state: "OK", rates: { nj: null, ga: null, fl: null, tx: 450, ca: null } },
-    { city: "Portland (OR)", state: "OR", rates: { nj: null, ga: null, fl: null, tx: null, ca: 750 } },
-    { city: "Grantville (PA)", state: "PA", rates: { nj: 300, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Keystone Pennsylvania (PA)", state: "PA", rates: { nj: 300, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Manheim (PA)", state: "PA", rates: { nj: 300, ga: null, fl: null, tx: 1200, ca: null } },
-    { city: "Pennsylvania (PA)", state: "PA", rates: { nj: 300, ga: null, fl: 1200, tx: null, ca: null } },
-    { city: "Hatfield (PA)", state: "PA", rates: { nj: 275, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Philadelphia (PA)", state: "PA", rates: { nj: 275, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Cranberry Township (PA)", state: "PA", rates: { nj: 475, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Pittsburgh (PA)", state: "PA", rates: { nj: 475, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Darlington (SC)", state: "SC", rates: { nj: null, ga: 325, fl: null, tx: null, ca: null } },
-    { city: "Greer (SC)", state: "SC", rates: { nj: null, ga: 350, fl: null, tx: null, ca: null } },
-    { city: "Nashville (TN)", state: "TN", rates: { nj: 800, ga: 400, fl: 600, tx: 700, ca: 1400 } },
-    { city: "Dallas (TX)", state: "TX", rates: { nj: 1100, ga: 800, fl: 900, tx: 250, ca: 1200 } },
-    { city: "Dallas-Fort Worth (TX)", state: "TX", rates: { nj: 1100, ga: 800, fl: 900, tx: 250, ca: 1200 } },
-    { city: "El Paso (TX)", state: "TX", rates: { nj: null, ga: null, fl: null, tx: null, ca: null } },
-    { city: "Houston (TX)", state: "TX", rates: { nj: 1150, ga: 850, fl: 950, tx: 250, ca: 1250 } },
-    { city: "Texas Hobby (TX)", state: "TX", rates: { nj: 1150, ga: 850, fl: 950, tx: 250, ca: 1250 } },
-    { city: "San Antonio (TX)", state: "TX", rates: { nj: 1200, ga: 900, fl: 1000, tx: 300, ca: 1100 } },
-    { city: "Salt Lake City (UT)", state: "UT", rates: { nj: 1600, ga: null, fl: 1100, tx: 550, ca: null } },
-    { city: "Utah (UT)", state: "UT", rates: { nj: 1600, ga: null, fl: 1100, tx: 550, ca: null } },
-    { city: "Fredericksburg (VA)", state: "VA", rates: { nj: 350, ga: null, fl: null, tx: null, ca: 1700 } },
-    { city: "Harrisonburg (VA)", state: "VA", rates: { nj: 450, ga: null, fl: null, tx: null, ca: 1700 } },
-    { city: "Seattle (WA)", state: "WA", rates: { nj: 1800, ga: 1800, fl: 1800, tx: 1500, ca: 500 } },
   ]
 };
 
-const DESTINATIONS = [
-  { id: 'nj', label: 'New Jersey (NJ 2024)' },
-  { id: 'ga', label: 'Georgia (GA 2024)' },
-  { id: 'fl', label: 'Florida (FL 2024)' },
-  { id: 'tx', label: 'Texas (TX 2024)' },
-  { id: 'ca', label: 'California (CA 2024)' },
+// --- ТАРИФЫ МОРСКОГО ФРАХТА (ПРАВКИ ЗАКАЗЧИКА ПО КЛАЙПЕДЕ) ---
+const OCEAN_FREIGHT_BASE = {
+  nj: { klp: 750, od: 1250, poti: 1350 },
+  ga: { klp: 850, od: 1350, poti: 1450 },
+  fl: { klp: 800, od: 1300, poti: 1400 },
+  tx: { klp: 950, od: 1450, poti: 1550 },
+  ca: { klp: 1150, od: 1650, poti: 1750 }
+};
+
+const VEHICLE_TYPES = [
+  { id: 'sedan', label: 'Седан', extra: 0, icon: Car },
+  { id: 'suv', label: 'Кроссовер', extra: 150, icon: Car },
+  { id: 'large-suv', label: 'Внедорожник / Минивэн', extra: 300, icon: Truck },
+  { id: 'pickup', label: 'Пикап / Грузовик', extra: 500, icon: Truck },
+  { id: 'moto', label: 'Мотоцикл', extra: -200, icon: Tag },
 ];
 
-// Полный список марок автомобилей для аукционов
+const EXIT_PORTS = [
+  { id: 'nj', label: 'Порт Нью-Джерси (NJ)' },
+  { id: 'ga', label: 'Порт Саванна (GA)' },
+  { id: 'fl', label: 'Порт Майами (FL)' },
+  { id: 'tx', label: 'Порт Хьюстон (TX)' },
+  { id: 'ca', label: 'Порт Лос-Анджелес (CA)' },
+];
+
+const DEST_PORTS = [
+  { id: 'klp', label: 'Клайпеда, Литва' },
+  { id: 'od', label: 'Одесса, Украина' },
+  { id: 'poti', label: 'Поти, Грузия' },
+];
+
+const FUEL_TYPES = [
+  { id: 'petrol', label: 'Бензин' },
+  { id: 'diesel', label: 'Дизель' },
+  { id: 'electric', label: 'Электро' }
+];
+
 const CAR_MAKES = [
-  "Acura", "Alfa Romeo", "Aston Martin", "Audi", "BMW", "Bentley", "Buick", "Cadillac", "Chevrolet", "Chrysler", 
-  "Daewoo", "Daihatsu", "Dodge", "Ferrari", "Fiat", "Ford", "Genesis", "GMC", "Honda", "Hummer", "Hyundai", "Infiniti", 
-  "Isuzu", "Jaguar", "Jeep", "Kia", "Lamborghini", "Land Rover", "Lexus", "Lincoln", "Lucid", "Maserati", "Mazda", 
-  "McLaren", "Mercedes-Benz", "Mini", "Mitsubishi", "Nissan", "Oldsmobile", "Polestar", "Pontiac", "Porsche", "Ram", "Rivian", 
-  "Rolls-Royce", "Saab", "Saturn", "Scion", "Smart", "Subaru", "Suzuki", "Tesla", "Toyota", "Volkswagen", "Volvo", "Другая"
+  "Acura", "Alfa Romeo", "Audi", "BMW", "Chevrolet", "Chrysler", "Dodge", "Ford", "GMC", "Honda", 
+  "Hyundai", "Infiniti", "Jeep", "Kia", "Land Rover", "Lexus", "Lincoln", "Mazda", "Mercedes-Benz", 
+  "Mitsubishi", "Nissan", "Porsche", "Ram", "Subaru", "Tesla", "Toyota", "Volkswagen", "Volvo", "Другая"
 ];
-
-// Кастомные логотипы аукционов (SVG)
-const CopartLogo = () => (
-  <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z" />
-  </svg>
-);
-
-const IAAILogo = () => (
-  <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
-    <path d="M4 4h4v16H4V4zm6 0h4v16h-4V4zm6 0h4v16h-4V4z" />
-  </svg>
-);
-
-const ManheimLogo = () => (
-  <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
-    <path d="M2 4h4l4 8 4-8h4v16h-4V9.6L12 16l-2-6.4V20H2V4z" />
-  </svg>
-);
 
 const AUCTIONS = [
-  { id: 'copart', label: 'Copart', Icon: CopartLogo },
-  { id: 'iaai', label: 'IAAI', Icon: IAAILogo },
-  { id: 'manheim', label: 'Manheim', Icon: ManheimLogo },
+  { id: 'copart', label: 'Copart' },
+  { id: 'iaai', label: 'IAAI' },
+  { id: 'manheim', label: 'Manheim' },
 ];
 
-// --- КОМПОНЕНТЫ ИНТЕРФЕЙСА ---
+// --- HELPER FUNCTIONS ---
 
-const Header = () => (
-  <header className="bg-black/95 text-white sticky top-0 z-50 backdrop-blur-md border-b border-gray-800 shadow-lg">
-    <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-[#FFCC33] text-black rounded-lg flex items-center justify-center transform rotate-3 shadow-[0_0_15px_rgba(255,204,51,0.5)]">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
-            <circle cx="7" cy="17" r="2" />
-            <circle cx="17" cy="17" r="2" />
-          </svg>
-        </div>
-        <div>
-          <h1 className="font-bold text-lg sm:text-xl tracking-wide uppercase leading-none font-display">Car Commission</h1>
-          <span className="text-[10px] text-[#FFCC33] tracking-[0.2em] font-medium uppercase">Calculator</span>
-        </div>
-      </div>
+const calculateAuctionFee = (price, auction) => {
+  const p = parseFloat(price) || 0;
+  if (p <= 0) return 0;
+  
+  if (auction === 'manheim') return Math.max(350, p * 0.05);
+  
+  if (p < 500) return 185;
+  if (p < 1000) return 265;
+  if (p < 1500) return 340;
+  if (p < 2000) return 405;
+  if (p < 2500) return 460;
+  if (p < 3000) return 510;
+  if (p < 3500) return 560;
+  if (p < 4000) return 610;
+  if (p < 4500) return 660;
+  if (p < 5000) return 710;
+  
+  return 750 + (p * 0.045);
+};
+
+const calculateUkraineCustoms = (price, year, volumeCm3, fuelType) => {
+  const p = parseFloat(price) || 0;
+  const vol = parseFloat(volumeCm3) || 0;
+  const currentYear = new Date().getFullYear();
+  const vehicleAge = Math.max(1, Math.min(15, currentYear - parseInt(year || currentYear) - 1));
+
+  if (p === 0) return { duty: 0, excise: 0, vat: 0, pension: 0, total: 0 };
+
+  if (fuelType === 'electric') {
+    const batteryCapacity = vol > 100 ? vol : 60; 
+    const electricExcise = batteryCapacity * 1.1; 
+    return { duty: 0, excise: electricExcise, vat: 0, pension: p * 0.03, total: electricExcise + (p * 0.03) };
+  }
+
+  const duty = p * 0.10;
+  let baseRate = (fuelType === 'petrol') ? (vol <= 3000 ? 50 : 100) : (vol <= 3500 ? 75 : 150);
+  const excise = baseRate * (vol / 1000) * vehicleAge * 1.1; 
+  const vat = (p + duty + excise) * 0.20;
+
+  let pensionRate = 0.03;
+  if (p > 20000) pensionRate = 0.04;
+  if (p > 40000) pensionRate = 0.05;
+  const pension = p * pensionRate;
+
+  return { duty, excise, vat, pension, total: duty + excise + vat + pension };
+};
+
+// --- COMPONENTS ---
+
+const PriceItem = ({ label, value, highlight = false, subtext }) => (
+  <div className="flex justify-between items-center py-1 group cursor-pointer hover:bg-white/5 rounded-lg px-2 -mx-2 transition-colors">
+    <div>
+      <div className="text-xs text-gray-400 font-medium">{label}</div>
+      {subtext && <div className="text-[9px] text-gray-600 font-bold">{subtext}</div>}
     </div>
-  </header>
+    <div className={`text-sm font-mono font-bold ${highlight ? 'text-red-500' : 'text-white'}`}>
+      {value === null || value === undefined ? '—' : `$${Math.round(value).toLocaleString()}`}
+    </div>
+  </div>
 );
 
-const InputField = ({ label, icon: Icon, children }) => (
-  <div className="mb-5 group">
-    <label className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-2 group-focus-within:text-[#FFCC33] transition-colors">
-      <Icon size={14} />
+const InputWrapper = ({ label, icon: Icon, children }) => (
+  <div className="space-y-2">
+    <label className="text-gray-500 text-[9px] font-bold uppercase tracking-[0.2em] flex items-center gap-2 px-1">
+      {Icon && <Icon size={12} className="text-[#FFCC33]" />}
       {label}
     </label>
     {children}
   </div>
 );
 
-const Select = ({ value, onChange, options, placeholder, disabled = false, itemsAreStrings = false }) => (
-  <div className="relative">
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={disabled}
-      className={`w-full bg-[#1A1A1A] text-white border border-gray-700 rounded-xl px-4 py-4 appearance-none focus:outline-none focus:border-[#FFCC33] focus:ring-1 focus:ring-[#FFCC33] transition-all duration-300 font-medium cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-500'}`}
-    >
-      <option value="">{placeholder}</option>
-      {options.map(opt => (
-        <option key={itemsAreStrings ? opt : (opt.id || opt.city)} value={itemsAreStrings ? opt : (opt.id || opt.city)}>
-          {itemsAreStrings ? opt : (opt.label || opt.city)}
-        </option>
-      ))}
-    </select>
-    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-      <ArrowRight size={16} className="rotate-90" />
-    </div>
-  </div>
-);
-
-const CurrencyInput = ({ value, onChange }) => (
-  <div className="relative">
-    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</div>
-    <input
-      type="number"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="0"
-      className="w-full bg-[#1A1A1A] text-white border border-gray-700 rounded-xl pl-10 pr-4 py-4 text-lg font-bold focus:outline-none focus:border-[#FFCC33] focus:ring-1 focus:ring-[#FFCC33] transition-all duration-300 placeholder-gray-600"
-    />
-  </div>
-);
-
-const ResultCard = ({ label, value, isTotal = false, subtext, icon: Icon }) => (
-  <div className={`p-4 rounded-xl flex justify-between items-center transition-all hover:scale-[1.01] ${isTotal ? 'bg-[#FFCC33] text-black shadow-[0_4px_20px_rgba(255,204,51,0.3)]' : 'bg-[#1A1A1A] border border-gray-800'}`}>
-    <div className="flex items-center gap-4">
-      {Icon && (
-        <div className={`p-3 rounded-xl ${isTotal ? 'bg-black/10' : 'bg-[#252525] text-[#FFCC33]'}`}>
-          <Icon size={20} />
-        </div>
-      )}
-      <div>
-        <div className={`text-xs font-bold uppercase tracking-wider ${isTotal ? 'text-black/70' : 'text-gray-500'}`}>{label}</div>
-        {subtext && <div className="text-[10px] opacity-70 mt-1 font-medium">{subtext}</div>}
-      </div>
-    </div>
-    <div className={`text-xl font-bold font-mono ${isTotal ? 'text-black' : 'text-white'}`}>
-      {value !== null ? `$${value.toLocaleString()}` : '—'}
-    </div>
-  </div>
-);
-
-const Modal = ({ isOpen, onClose, onConfirm, title, children }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm cursor-pointer" onClick={onClose}></div>
-      <div className="bg-[#121212] border border-gray-800 rounded-3xl p-6 w-full max-w-md relative z-10 shadow-2xl">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-white">{title}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors cursor-pointer">
-            <X size={24} />
-          </button>
-        </div>
-        {children}
-        <div className="mt-8 flex gap-3">
-          <button 
-            onClick={onClose}
-            className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-xl transition-colors cursor-pointer"
-          >
-            Отмена
-          </button>
-          <button 
-            onClick={onConfirm}
-            className="flex-1 bg-[#FFCC33] hover:bg-[#e6b82e] text-black font-bold py-3 rounded-xl transition-colors cursor-pointer"
-          >
-            Сохранить
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export default function App() {
-  // --- СОСТОЯНИЕ (STATE) ---
-  const [carMake, setCarMake] = useState(() => {
-    try {
-      const saved = localStorage.getItem('renault_calc_settings');
-      return saved ? JSON.parse(saved).carMake : '';
-    } catch (e) { return ''; }
-  });
-
-  const [carModel, setCarModel] = useState(() => {
-    try {
-      const saved = localStorage.getItem('renault_calc_settings');
-      return saved ? JSON.parse(saved).carModel : '';
-    } catch (e) { return ''; }
-  });
-
-  const [auctionPrice, setAuctionPrice] = useState(() => {
-    try {
-      const saved = localStorage.getItem('renault_calc_settings');
-      return saved ? JSON.parse(saved).auctionPrice : '';
-    } catch (e) { return ''; }
-  });
-
-  const [auctionType, setAuctionType] = useState(() => {
-    try {
-      const saved = localStorage.getItem('renault_calc_settings');
-      return saved ? JSON.parse(saved).auctionType : 'copart';
-    } catch (e) { return 'copart'; }
-  });
-
-  const [selectedCity, setSelectedCity] = useState(() => {
-    try {
-      const saved = localStorage.getItem('renault_calc_settings');
-      return saved ? JSON.parse(saved).selectedCity : '';
-    } catch (e) { return ''; }
-  });
-
-  const [destination, setDestination] = useState(() => {
-    try {
-      const saved = localStorage.getItem('renault_calc_settings');
-      return saved ? JSON.parse(saved).destination : 'ga';
-    } catch (e) { return 'ga'; }
-  });
+  const [vehicleType, setVehicleType] = useState('sedan');
+  const [auctionPrice, setAuctionPrice] = useState('');
+  const [auctionType, setAuctionType] = useState('copart');
+  const [carMake, setCarMake] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [exitPort, setExitPort] = useState('nj');
+  const [destPort, setDestPort] = useState('klp');
+  
+  // Customs
+  const [prodYear, setProdYear] = useState('2020');
+  const [engineVolume, setEngineVolume] = useState('2000');
+  const [fuelType, setFuelType] = useState('petrol');
+  
+  // Extra Fees
+  const brokerFee = 450;
+  const exportDocsFee = 150;
+  const [insuranceEnabled, setInsuranceEnabled] = useState(true);
 
   const [history, setHistory] = useState([]);
-  const [animateTotal, setAnimateTotal] = useState(false);
-  
-  // Состояния модального окна
-  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [saveName, setSaveName] = useState('');
 
-  // --- ЭФФЕКТЫ (EFFECTS) ---
-  // Установка фавикона
+  // Calculations
+  const auctionFee = useMemo(() => calculateAuctionFee(auctionPrice, auctionType), [auctionPrice, auctionType]);
+  const currentCityObj = useMemo(() => SHIPPING_DATA[auctionType]?.find(c => c.city === selectedCity), [selectedCity, auctionType]);
+  const landCost = useMemo(() => (currentCityObj ? currentCityObj.rates[exitPort] : null), [currentCityObj, exitPort]);
+  
+  const vehicleExtra = useMemo(() => VEHICLE_TYPES.find(t => t.id === vehicleType)?.extra || 0, [vehicleType]);
+  const baseOcean = useMemo(() => OCEAN_FREIGHT_BASE[exitPort]?.[destPort] || 0, [exitPort, destPort]);
+  const oceanCost = useMemo(() => baseOcean + vehicleExtra, [baseOcean, vehicleExtra]);
+  
+  const insurance = useMemo(() => insuranceEnabled ? (parseFloat(auctionPrice) || 0) * 0.015 : 0, [auctionPrice, insuranceEnabled]);
+  const customs = useMemo(() => calculateUkraineCustoms(auctionPrice, prodYear, engineVolume, fuelType), [auctionPrice, prodYear, engineVolume, fuelType]);
+  
+  const totalCost = useMemo(() => {
+    const p = parseFloat(auctionPrice) || 0;
+    return p + auctionFee + (landCost || 0) + oceanCost + customs.total + brokerFee + exportDocsFee + insurance;
+  }, [auctionPrice, auctionFee, landCost, oceanCost, customs, insurance]);
+
   useEffect(() => {
-    const updateFavicon = () => {
-      let link = document.querySelector("link[rel~='icon']");
-      if (!link) {
-        link = document.createElement('link');
-        link.rel = 'icon';
-        document.head.appendChild(link);
-      }
-      const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23FFCC33" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
-          <circle cx="7" cy="17" r="2" />
-          <circle cx="17" cy="17" r="2" />
-        </svg>
-      `;
-      link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
-    };
-    updateFavicon();
+    const saved = localStorage.getItem('w8_pro_history');
+    if (saved) setHistory(JSON.parse(saved));
   }, []);
 
-  // Сохранение настроек в LocalStorage
-  useEffect(() => {
-    const settings = { auctionPrice, auctionType, selectedCity, destination, carMake, carModel };
-    localStorage.setItem('renault_calc_settings', JSON.stringify(settings));
-  }, [auctionPrice, auctionType, selectedCity, destination, carMake, carModel]);
-
-  // Загрузка истории
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('renault_calc_history');
-      if (saved) setHistory(JSON.parse(saved));
-    } catch (e) { console.error("Error loading history", e); }
-  }, []);
-
-  // Сохранение истории
-  useEffect(() => {
-    try {
-      localStorage.setItem('renault_calc_history', JSON.stringify(history));
-    } catch (e) { console.error("Error saving history", e); }
-  }, [history]);
-
-  // --- ВЫЧИСЛЯЕМЫЕ ДАННЫЕ ---
-  const availableLocations = useMemo(() => SHIPPING_DATA[auctionType] || [], [auctionType]);
-  const currentRateObj = useMemo(() => availableLocations.find(l => l.city === selectedCity), [selectedCity, availableLocations]);
-  const shippingCost = useMemo(() => (currentRateObj && destination) ? currentRateObj.rates[destination] : null, [currentRateObj, destination]);
-  const totalCost = useMemo(() => (parseFloat(auctionPrice) || 0) + (shippingCost || 0), [auctionPrice, shippingCost]);
-
-  useEffect(() => {
-    setAnimateTotal(true);
-    const timer = setTimeout(() => setAnimateTotal(false), 300);
-    return () => clearTimeout(timer);
-  }, [totalCost]);
-
-  // --- ОБРАБОТЧИКИ ---
-  const handleOpenSaveModal = () => {
-    if (!shippingCost) return;
-    // Предзаполняем имя сохранения маркой и моделью
-    const defaultName = carMake || carModel ? `${carMake} ${carModel}`.trim() : `Расчет от ${new Date().toLocaleDateString()}`;
-    setSaveName(defaultName);
-    setIsSaveModalOpen(true);
-  };
-
-  const handleConfirmSave = () => {
-    const newEntry = {
+  const saveToHistory = () => {
+    const entry = {
       id: Date.now(),
-      name: saveName.trim() || `Расчет ${history.length + 1}`,
-      date: new Date().toLocaleDateString(),
-      auction: auctionType.toUpperCase(),
-      make: carMake,
-      model: carModel,
-      city: selectedCity,
-      dest: destination.toUpperCase(),
-      price: parseFloat(auctionPrice) || 0,
-      shipping: shippingCost,
-      total: totalCost
+      name: saveName || carMake || 'Лот',
+      total: totalCost,
+      date: new Date().toLocaleDateString()
     };
-    setHistory([newEntry, ...history]);
-    setIsSaveModalOpen(false);
+    const newHistory = [entry, ...history].slice(0, 10);
+    setHistory(newHistory);
+    localStorage.setItem('w8_pro_history', JSON.stringify(newHistory));
+    setIsModalOpen(false);
   };
-
-  const deleteHistoryItem = (id) => setHistory(history.filter(h => h.id !== id));
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-gray-200 font-sans selection:bg-[#FFCC33] selection:text-black">
-      <Header />
+    <div className="min-h-screen bg-[#0F0F0F] text-gray-200 font-sans selection:bg-[#FFCC33] selection:text-black">
+      {/* Header */}
+      <header className="bg-black text-white sticky top-0 z-50 border-b border-gray-800 py-4 px-6 flex items-center justify-between shadow-2xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-[#FFCC33] text-black rounded-lg flex items-center justify-center transform rotate-3 shadow-[0_0_15px_rgba(255,204,51,0.5)] cursor-pointer">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+              <circle cx="7" cy="17" r="2" />
+              <circle cx="17" cy="17" r="2" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="font-bold text-lg sm:text-xl tracking-wide uppercase leading-none">Car Commission</h1>
+            <span className="text-[10px] text-[#FFCC33] tracking-[0.2em] font-medium uppercase">Calculator</span>
+          </div>
+        </div>
+      </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-12 gap-8">
+      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* КОЛОНКА КАЛЬКУЛЯТОРА */}
-        <div className="md:col-span-7 space-y-6">
-          <div className="bg-[#121212] p-6 rounded-3xl border border-gray-800 shadow-2xl relative overflow-hidden">
-             {/* Декоративное свечение */}
-             <div className="absolute top-0 right-0 w-64 h-64 bg-[#FFCC33] opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-              <Calculator className="text-[#FFCC33]" />
-              Расчет стоимости
+        {/* INPUTS COLUMN */}
+        <div className="lg:col-span-8 space-y-6">
+          
+          {/* STEP 1: CAR */}
+          <div className="bg-[#161616] rounded-[2rem] p-6 sm:p-8 border border-gray-800 shadow-xl space-y-8">
+            <h2 className="text-xl font-bold text-white flex items-center gap-3">
+              <Car className="text-[#FFCC33]" size={20} />
+              1. Автомобиль и параметры лота
             </h2>
 
-            {/* Детали авто: Марка и Модель */}
-            <div className="grid grid-cols-2 gap-4">
-              <InputField label="Марка" icon={Tag}>
-                <Select 
-                  value={carMake} 
-                  onChange={setCarMake} 
-                  options={CAR_MAKES} 
-                  placeholder="Выберите марку..." 
-                  itemsAreStrings={true} 
-                />
-              </InputField>
-              <InputField label="Модель" icon={Info}>
-                <input 
-                  type="text"
-                  value={carModel}
-                  onChange={(e) => setCarModel(e.target.value)}
-                  placeholder="Напр. Prius"
-                  className="w-full bg-[#1A1A1A] text-white border border-gray-700 rounded-xl px-4 py-4 focus:outline-none focus:border-[#FFCC33] transition-all placeholder-gray-600"
-                />
-              </InputField>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {VEHICLE_TYPES.map(type => (
+                <button
+                  key={type.id}
+                  onClick={() => setVehicleType(type.id)}
+                  className={`p-4 rounded-2xl flex flex-col items-center gap-2 border transition-all cursor-pointer ${vehicleType === type.id ? 'bg-[#FFCC33] border-[#FFCC33] text-black shadow-lg shadow-[#FFCC33]/20' : 'bg-[#1F1F1F] border-gray-800 hover:border-gray-500'}`}
+                >
+                  <type.icon size={20} />
+                  <span className="text-[10px] font-bold uppercase text-center leading-tight">{type.label}</span>
+                </button>
+              ))}
             </div>
 
-            <InputField label="Стоимость авто (лот)" icon={DollarSign}>
-              <CurrencyInput value={auctionPrice} onChange={setAuctionPrice} />
-            </InputField>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <InputWrapper label="Марка" icon={Tag}>
+                <select value={carMake} onChange={(e) => setCarMake(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33] transition-colors">
+                  <option value="">Выберите марку</option>
+                  {CAR_MAKES.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </InputWrapper>
 
-            <InputField label="Аукцион" icon={Anchor}>
-              <div className="grid grid-cols-3 gap-3">
-                {AUCTIONS.map(auc => (
-                  <button
-                    key={auc.id}
-                    onClick={() => { setAuctionType(auc.id); setSelectedCity(''); }}
-                    className={`relative py-4 px-2 rounded-xl text-sm font-bold transition-all flex flex-col items-center gap-2 cursor-pointer ${auctionType === auc.id ? 'bg-white text-black ring-2 ring-[#FFCC33]' : 'bg-[#1A1A1A] text-gray-400 hover:bg-[#252525]'}`}
-                  >
-                    <auc.Icon />
-                    <span>{auc.label}</span>
-                  </button>
-                ))}
-              </div>
-            </InputField>
+              <InputWrapper label="Год" icon={Calendar}>
+                <select value={prodYear} onChange={(e) => setProdYear(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33] transition-colors">
+                  {Array.from({ length: 30 }, (_, i) => 2024 - i).map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </InputWrapper>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <InputField label="Город отправки" icon={MapPin}>
-                <Select value={selectedCity} onChange={setSelectedCity} options={availableLocations} placeholder="Выберите город..." />
-              </InputField>
-              <InputField label="Порт назначения" icon={Anchor}>
-                <Select value={destination} onChange={setDestination} options={DESTINATIONS} placeholder="Выберите порт..." />
-              </InputField>
+              <InputWrapper label="Объем (см3)" icon={Zap}>
+                <input type="number" value={engineVolume} onChange={(e) => setEngineVolume(e.target.value)} placeholder="2000" className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none focus:border-[#FFCC33] cursor-pointer" />
+              </InputWrapper>
             </div>
 
-            {selectedCity && destination && shippingCost === null && (
-              <div className="bg-red-900/20 border border-red-900/50 text-red-400 p-3 rounded-xl text-sm mb-4 text-center">
-                Маршрут недоступен в текущей сетке тарифов.
-              </div>
-            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <InputWrapper label="Тип топлива" icon={Fuel}>
+                <div className="flex gap-2 bg-[#1F1F1F] p-1 rounded-xl border border-gray-800">
+                  {FUEL_TYPES.map(f => (
+                    <button key={f.id} onClick={() => setFuelType(f.id)} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${fuelType === f.id ? 'bg-[#333] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </InputWrapper>
+              
+              <InputWrapper label="Цена аукциона ($)" icon={DollarSign}>
+                <input type="number" value={auctionPrice} onChange={(e) => setAuctionPrice(e.target.value)} placeholder="0" className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer text-lg shadow-inner" />
+              </InputWrapper>
+            </div>
           </div>
 
-          {/* Результаты */}
-          <div className="bg-[#121212] p-6 rounded-3xl border border-gray-800">
-            <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">Итоговая смета</h3>
-            <div className="space-y-3">
-              <ResultCard label="Цена лота" value={parseFloat(auctionPrice) || 0} icon={Car} />
-              <ResultCard 
-                label="Доставка по США (Суша)" 
-                value={shippingCost} 
-                subtext={selectedCity ? `${auctionType.toUpperCase()}: ${selectedCity} → ${destination.toUpperCase()}` : 'Выберите маршрут'}
-                icon={Truck}
-              />
-              <div className="h-px bg-gray-800 my-2"></div>
-              <div className={`transform transition-all duration-300 ${animateTotal ? 'scale-[1.02]' : 'scale-100'}`}>
-                <ResultCard label="ОБЩАЯ СТОИМОСТЬ" value={totalCost} isTotal={true} icon={DollarSign} />
-              </div>
+          {/* STEP 2: LOGISTICS */}
+          <div className="bg-[#161616] rounded-[2rem] p-6 sm:p-8 border border-gray-800 shadow-xl space-y-8">
+            <h2 className="text-xl font-bold text-white flex items-center gap-3">
+              <Globe className="text-[#FFCC33]" size={20} />
+              2. Логистика и Маршрут
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <InputWrapper label="Аукцион" icon={Anchor}>
+                <div className="flex gap-2 bg-[#1F1F1F] p-1 rounded-xl border border-gray-800">
+                  {AUCTIONS.map(a => (
+                    <button key={a.id} onClick={() => { setAuctionType(a.id); setSelectedCity(''); }} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${auctionType === a.id ? 'bg-[#333] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              </InputWrapper>
+
+              <InputWrapper label="Площадка (USA)" icon={MapPin}>
+                <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
+                  <option value="">Выберите город</option>
+                  {SHIPPING_DATA[auctionType].map(l => <option key={l.city} value={l.city}>{l.city}</option>)}
+                </select>
+              </InputWrapper>
             </div>
 
-            <button 
-              onClick={handleOpenSaveModal}
-              disabled={!shippingCost}
-              className="w-full mt-6 bg-[#222] hover:bg-[#333] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 group cursor-pointer"
-            >
-              <Save size={18} className="text-[#FFCC33] group-hover:scale-110 transition-transform" />
-              Сохранить расчет
-            </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <InputWrapper label="Порт выхода (USA)" icon={Ship}>
+                <select value={exitPort} onChange={(e) => setExitPort(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
+                  {EXIT_PORTS.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+                </select>
+              </InputWrapper>
+
+              <InputWrapper label="Порт назначения" icon={Anchor}>
+                <select value={destPort} onChange={(e) => setDestPort(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
+                  {DEST_PORTS.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+                </select>
+              </InputWrapper>
+            </div>
+            
+            <div className="flex items-center gap-4 bg-[#1F1F1F] p-4 rounded-2xl border border-gray-800 hover:border-gray-700 transition-colors">
+              <div className="flex-1">
+                <div className="text-xs font-bold text-gray-400 uppercase mb-1">Страхование (1.5%)</div>
+                <div className="text-[10px] text-gray-600 font-bold">Полное покрытие повреждений при доставке</div>
+              </div>
+              <button 
+                onClick={() => setInsuranceEnabled(!insuranceEnabled)}
+                className={`w-14 h-8 rounded-full transition-all relative cursor-pointer ${insuranceEnabled ? 'bg-[#FFCC33]' : 'bg-gray-700'}`}
+              >
+                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${insuranceEnabled ? 'left-7' : 'left-1'}`} />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* КОЛОНКА ИСТОРИИ */}
-        <div className="md:col-span-5">
-          <div className="bg-[#121212] rounded-3xl border border-gray-800 h-full overflow-hidden flex flex-col max-h-[800px]">
-            <div className="p-6 border-b border-gray-800 bg-[#151515]">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <History className="text-gray-400" />
-                История
-              </h2>
+        {/* RIGHT COLUMN: SUMMARY */}
+        <div className="lg:col-span-4 space-y-6">
+          <div className="bg-[#161616] rounded-[2.5rem] border border-gray-800 sticky top-24 overflow-hidden shadow-2xl">
+            <div className="p-6 border-b border-gray-800 bg-[#1A1A1A]">
+              <h3 className="font-bold flex items-center gap-2 text-white uppercase text-sm tracking-widest">
+                <ShieldCheck size={18} className="text-[#FFCC33]" />
+                Полная смета
+              </h3>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-              {history.length === 0 ? (
-                <div className="text-center py-10 opacity-30">
-                  <p>Нет сохраненных расчетов</p>
+            <div className="p-6 space-y-4">
+              <div className="space-y-1">
+                <PriceItem label="Стоимость авто" value={auctionPrice} />
+                <PriceItem label="Аукционный сбор" value={auctionFee} subtext={`Аукцион: ${auctionType.toUpperCase()}`} />
+              </div>
+
+              <div className="h-px bg-gray-800/50" />
+
+              <div className="space-y-1">
+                <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Логистика (Logistics)</div>
+                <PriceItem label="Доставка (USA Land)" value={landCost} highlight={landCost === null} />
+                <PriceItem label="Фрахт (Ocean)" value={oceanCost} subtext={`Порт: ${destPort.toUpperCase()}`} />
+                <PriceItem label="Страховка" value={insurance} />
+              </div>
+
+              <div className="h-px bg-gray-800/50" />
+
+              <div className="space-y-1">
+                <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Таможня (Customs UA)</div>
+                <PriceItem label="Пошлина + Акциз + НДС" value={customs.total - customs.pension} />
+                <PriceItem label="Пенсионный фонд" value={customs.pension} />
+              </div>
+
+              <div className="h-px bg-gray-800/50" />
+
+              <div className="space-y-1">
+                <PriceItem label="Брокер + Экспорт" value={brokerFee + exportDocsFee} subtext="Оформление и документация" />
+              </div>
+
+              <div className="pt-6 mt-6 border-t border-gray-800">
+                <div className="text-[10px] font-bold text-gray-500 uppercase mb-2">ИТОГО ПОД КЛЮЧ</div>
+                <div className="text-5xl font-black text-[#FFCC33] font-mono leading-none tracking-tighter">
+                  ${Math.round(totalCost).toLocaleString()}
                 </div>
+              </div>
+
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="w-full mt-6 bg-[#FFCC33] hover:bg-[#E6B82E] text-black font-black py-5 rounded-2xl transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-[#FFCC33]/10 cursor-pointer uppercase text-xs tracking-[0.2em]"
+              >
+                Сохранить расчет
+              </button>
+            </div>
+          </div>
+          
+          {/* History */}
+          <div className="bg-[#161616] rounded-3xl border border-gray-800 p-6">
+            <h3 className="font-bold text-[10px] text-gray-500 uppercase mb-4 flex items-center gap-2">
+              <History size={14} /> История (History)
+            </h3>
+            <div className="space-y-3">
+              {history.length === 0 ? (
+                <div className="text-xs text-gray-700 italic">История пуста</div>
               ) : (
-                history.map((item) => {
-                  const AuctionIcon = AUCTIONS.find(a => a.id.toUpperCase() === item.auction.toUpperCase())?.Icon || Car;
-                  return (
-                    <div key={item.id} className="bg-[#0A0A0A] border border-gray-800 p-4 rounded-xl hover:border-[#FFCC33]/50 transition-colors group cursor-pointer">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
-                           <div className="p-1 rounded-md bg-[#FFCC33]/10 text-[#FFCC33]"><AuctionIcon size={14} /></div>
-                           <span className="text-white text-sm font-bold truncate max-w-[120px]">{item.name}</span>
-                        </div>
-                        <button onClick={() => deleteHistoryItem(item.id)} className="text-gray-600 hover:text-red-500 transition-colors p-1 cursor-pointer">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                      
-                      <div className="text-xs text-gray-400 mb-2">
-                        {item.make} {item.model} <span className="mx-1 opacity-30">|</span> {item.date}
-                      </div>
-
-                      <div className="text-[11px] text-gray-500 mb-2 truncate">
-                        {item.city} → {item.dest}
-                      </div>
-
-                      <div className="flex justify-between items-end border-t border-gray-800 pt-2 mt-2">
-                        <div className="text-[10px] text-gray-600">
-                          Лот: ${item.price} <br/>
-                          Дост: ${item.shipping}
-                        </div>
-                        <div className="text-lg font-bold text-[#FFCC33] font-mono">
-                          ${item.total.toLocaleString()}
-                        </div>
-                      </div>
+                history.map(item => (
+                  <div key={item.id} className="bg-[#1F1F1F] p-3 rounded-xl border border-gray-800 flex justify-between items-center group cursor-pointer hover:border-[#FFCC33]/40 transition-colors">
+                    <div>
+                      <div className="text-[9px] text-gray-500">{item.date}</div>
+                      <div className="text-xs font-bold text-white">{item.name}</div>
                     </div>
-                  );
-                })
+                    <div className="text-[#FFCC33] font-mono font-bold text-sm">${Math.round(item.total).toLocaleString()}</div>
+                  </div>
+                ))
               )}
             </div>
           </div>
         </div>
-
       </main>
 
-      {/* МОДАЛЬНОЕ ОКНО СОХРАНЕНИЯ */}
-      <Modal 
-        isOpen={isSaveModalOpen} 
-        onClose={() => setIsSaveModalOpen(false)} 
-        onConfirm={handleConfirmSave}
-        title="Сохранение расчета"
-      >
-        <div className="space-y-4">
-          <p className="text-gray-400 text-sm">Введите название для этого расчета, чтобы его было легче найти в истории:</p>
-          <input 
-            type="text"
-            autoFocus
-            value={saveName}
-            onChange={(e) => setSaveName(e.target.value)}
-            placeholder="Напр. Toyota Camry 2021 Белая"
-            className="w-full bg-[#1A1A1A] text-white border border-gray-700 rounded-xl px-4 py-4 focus:outline-none focus:border-[#FFCC33] transition-all"
-            onKeyDown={(e) => e.key === 'Enter' && handleConfirmSave()}
-          />
+      {/* SAVE MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/95 backdrop-blur-sm cursor-pointer" onClick={() => setIsModalOpen(false)} />
+          <div className="bg-[#161616] border border-gray-800 rounded-[2.5rem] p-8 w-full max-w-sm relative z-10 shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-widest text-center">Название</h3>
+            <input 
+              type="text" 
+              placeholder="Напр. Tesla Model Y" 
+              value={saveName} 
+              onChange={(e) => setSaveName(e.target.value)} 
+              className="w-full bg-[#1F1F1F] border border-gray-800 rounded-2xl px-6 py-4 outline-none text-white focus:border-[#FFCC33] cursor-pointer mb-6"
+              autoFocus
+            />
+            <button 
+              onClick={saveToHistory} 
+              className="w-full bg-[#FFCC33] text-black font-black py-4 rounded-2xl hover:bg-[#E6B82E] transition-all cursor-pointer uppercase tracking-widest text-xs"
+            >
+              Подтвердить
+            </button>
+          </div>
         </div>
-      </Modal>
+      )}
 
       <style>{`
-        .font-display { font-family: 'Inter', sans-serif; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #0A0A0A; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0F0F0F; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23555'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); background-position: right 1rem center; background-repeat: no-repeat; background-size: 1rem; padding-right: 2.5rem; }
       `}</style>
     </div>
   );
