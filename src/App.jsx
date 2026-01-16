@@ -336,7 +336,7 @@ const Select = ({ value, onChange, options, placeholder, disabled = false, items
       value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
-      className={`w-full bg-[#1A1A1A] text-white border border-gray-700 rounded-xl px-4 py-4 appearance-none focus:outline-none focus:border-[#FFCC33] focus:ring-1 focus:ring-[#FFCC33] transition-all duration-300 font-medium ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-500'}`}
+      className={`w-full bg-[#1A1A1A] text-white border border-gray-700 rounded-xl px-4 py-4 appearance-none focus:outline-none focus:border-[#FFCC33] focus:ring-1 focus:ring-[#FFCC33] transition-all duration-300 font-medium cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-500'}`}
     >
       <option value="">{placeholder}</option>
       {options.map(opt => (
@@ -387,11 +387,11 @@ const Modal = ({ isOpen, onClose, onConfirm, title, children }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm cursor-pointer" onClick={onClose}></div>
       <div className="bg-[#121212] border border-gray-800 rounded-3xl p-6 w-full max-w-md relative z-10 shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-bold text-white">{title}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors cursor-pointer">
             <X size={24} />
           </button>
         </div>
@@ -399,13 +399,13 @@ const Modal = ({ isOpen, onClose, onConfirm, title, children }) => {
         <div className="mt-8 flex gap-3">
           <button 
             onClick={onClose}
-            className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-xl transition-colors"
+            className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-xl transition-colors cursor-pointer"
           >
             Отмена
           </button>
           <button 
             onClick={onConfirm}
-            className="flex-1 bg-[#FFCC33] hover:bg-[#e6b82e] text-black font-bold py-3 rounded-xl transition-colors"
+            className="flex-1 bg-[#FFCC33] hover:bg-[#e6b82e] text-black font-bold py-3 rounded-xl transition-colors cursor-pointer"
           >
             Сохранить
           </button>
@@ -599,7 +599,7 @@ export default function App() {
                   <button
                     key={auc.id}
                     onClick={() => { setAuctionType(auc.id); setSelectedCity(''); }}
-                    className={`relative py-4 px-2 rounded-xl text-sm font-bold transition-all flex flex-col items-center gap-2 ${auctionType === auc.id ? 'bg-white text-black ring-2 ring-[#FFCC33]' : 'bg-[#1A1A1A] text-gray-400 hover:bg-[#252525]'}`}
+                    className={`relative py-4 px-2 rounded-xl text-sm font-bold transition-all flex flex-col items-center gap-2 cursor-pointer ${auctionType === auc.id ? 'bg-white text-black ring-2 ring-[#FFCC33]' : 'bg-[#1A1A1A] text-gray-400 hover:bg-[#252525]'}`}
                   >
                     <auc.Icon />
                     <span>{auc.label}</span>
@@ -644,7 +644,7 @@ export default function App() {
             <button 
               onClick={handleOpenSaveModal}
               disabled={!shippingCost}
-              className="w-full mt-6 bg-[#222] hover:bg-[#333] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 group"
+              className="w-full mt-6 bg-[#222] hover:bg-[#333] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 group cursor-pointer"
             >
               <Save size={18} className="text-[#FFCC33] group-hover:scale-110 transition-transform" />
               Сохранить расчет
@@ -671,13 +671,15 @@ export default function App() {
                 history.map((item) => {
                   const AuctionIcon = AUCTIONS.find(a => a.id.toUpperCase() === item.auction.toUpperCase())?.Icon || Car;
                   return (
-                    <div key={item.id} className="bg-[#0A0A0A] border border-gray-800 p-4 rounded-xl hover:border-[#FFCC33]/50 transition-colors group">
+                    <div key={item.id} className="bg-[#0A0A0A] border border-gray-800 p-4 rounded-xl hover:border-[#FFCC33]/50 transition-colors group cursor-pointer">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
                            <div className="p-1 rounded-md bg-[#FFCC33]/10 text-[#FFCC33]"><AuctionIcon size={14} /></div>
                            <span className="text-white text-sm font-bold truncate max-w-[120px]">{item.name}</span>
                         </div>
-                        <button onClick={() => deleteHistoryItem(item.id)} className="text-gray-600 hover:text-red-500 transition-colors p-1"><Trash2 size={14} /></button>
+                        <button onClick={() => deleteHistoryItem(item.id)} className="text-gray-600 hover:text-red-500 transition-colors p-1 cursor-pointer">
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                       
                       <div className="text-xs text-gray-400 mb-2">
