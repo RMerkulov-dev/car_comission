@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { MapPin, Calculator, DollarSign, Save, Trash2, History, Anchor, ArrowRight, Truck, Car } from 'lucide-react';
+import { MapPin, Calculator, DollarSign, Save, Trash2, History, Anchor, ArrowRight, Truck, Car, Tag, Info, X } from 'lucide-react';
 
-// --- DATA MOCKUP BASED ON FULL USER CSV SNIPPETS + INTERPOLATED DATA ---
+// --- ДАННЫЕ ДЛЯ РАСЧЕТОВ ---
 const SHIPPING_DATA = {
   copart: [
     { city: "Anchorage (AK)", state: "AK", rates: { nj: 3500, ga: null, fl: 3500, tx: 3500, ca: 3500 } },
@@ -45,8 +45,7 @@ const SHIPPING_DATA = {
     { city: "Peoria (IL)", state: "IL", rates: { nj: 850, ga: 750, fl: 950, tx: 850, ca: 1500 } },
     { city: "Indianapolis (IN)", state: "IN", rates: { nj: 700, ga: 600, fl: 800, tx: 850, ca: 1450 } },
     { city: "Kansas City (KS)", state: "KS", rates: { nj: 1000, ga: 800, fl: 1000, tx: 600, ca: 1300 } },
-    { city: "Lexington (KY)", state: "KY", rates: { nj: 700, ga: 500, fl: 700, tx: 800, ca: 1450 } },
-    { city: "Louisville (KY)", state: "KY", rates: { nj: 700, ga: 550, fl: 750, tx: 800, ca: 1450 } },
+    { city: "Lexington (KY)", state: "KY", rates: { nj: 700, ga: 550, fl: 750, tx: 800, ca: 1450 } },
     { city: "Baton Rouge (LA)", state: "LA", rates: { nj: 1150, ga: 600, fl: 700, tx: 350, ca: 1400 } },
     { city: "New Orleans (LA)", state: "LA", rates: { nj: 1100, ga: 500, fl: 600, tx: 400, ca: 1400 } },
     { city: "Shreveport (LA)", state: "LA", rates: { nj: 1150, ga: 650, fl: 750, tx: 300, ca: 1300 } },
@@ -265,7 +264,16 @@ const DESTINATIONS = [
   { id: 'ca', label: 'California (CA 2024)' },
 ];
 
-// Custom SVGs for Auction Logos
+// Полный список марок автомобилей для аукционов
+const CAR_MAKES = [
+  "Acura", "Alfa Romeo", "Aston Martin", "Audi", "BMW", "Bentley", "Buick", "Cadillac", "Chevrolet", "Chrysler", 
+  "Daewoo", "Daihatsu", "Dodge", "Ferrari", "Fiat", "Ford", "Genesis", "GMC", "Honda", "Hummer", "Hyundai", "Infiniti", 
+  "Isuzu", "Jaguar", "Jeep", "Kia", "Lamborghini", "Land Rover", "Lexus", "Lincoln", "Lucid", "Maserati", "Mazda", 
+  "McLaren", "Mercedes-Benz", "Mini", "Mitsubishi", "Nissan", "Oldsmobile", "Polestar", "Pontiac", "Porsche", "Ram", "Rivian", 
+  "Rolls-Royce", "Saab", "Saturn", "Scion", "Smart", "Subaru", "Suzuki", "Tesla", "Toyota", "Volkswagen", "Volvo", "Другая"
+];
+
+// Кастомные логотипы аукционов (SVG)
 const CopartLogo = () => (
   <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z" />
@@ -290,14 +298,13 @@ const AUCTIONS = [
   { id: 'manheim', label: 'Manheim', Icon: ManheimLogo },
 ];
 
-// --- COMPONENTS ---
+// --- КОМПОНЕНТЫ ИНТЕРФЕЙСА ---
 
 const Header = () => (
   <header className="bg-black/95 text-white sticky top-0 z-50 backdrop-blur-md border-b border-gray-800 shadow-lg">
     <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 bg-[#FFCC33] text-black rounded-lg flex items-center justify-center transform rotate-3 shadow-[0_0_15px_rgba(255,204,51,0.5)]">
-          {/* Renault-style Diamond/Car abstract icon */}
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
             <circle cx="7" cy="17" r="2" />
@@ -309,7 +316,6 @@ const Header = () => (
           <span className="text-[10px] text-[#FFCC33] tracking-[0.2em] font-medium uppercase">Calculator</span>
         </div>
       </div>
-      {/* Version and logistics text removed */}
     </div>
   </header>
 );
@@ -324,7 +330,7 @@ const InputField = ({ label, icon: Icon, children }) => (
   </div>
 );
 
-const Select = ({ value, onChange, options, placeholder, disabled = false }) => (
+const Select = ({ value, onChange, options, placeholder, disabled = false, itemsAreStrings = false }) => (
   <div className="relative">
     <select
       value={value}
@@ -334,8 +340,8 @@ const Select = ({ value, onChange, options, placeholder, disabled = false }) => 
     >
       <option value="">{placeholder}</option>
       {options.map(opt => (
-        <option key={opt.id || opt.city} value={opt.id || opt.city}>
-          {opt.label || opt.city}
+        <option key={itemsAreStrings ? opt : (opt.id || opt.city)} value={itemsAreStrings ? opt : (opt.id || opt.city)}>
+          {itemsAreStrings ? opt : (opt.label || opt.city)}
         </option>
       ))}
     </select>
@@ -377,101 +383,161 @@ const ResultCard = ({ label, value, isTotal = false, subtext, icon: Icon }) => (
   </div>
 );
 
+const Modal = ({ isOpen, onClose, onConfirm, title, children }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="bg-[#121212] border border-gray-800 rounded-3xl p-6 w-full max-w-md relative z-10 shadow-2xl">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-white">{title}</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+            <X size={24} />
+          </button>
+        </div>
+        {children}
+        <div className="mt-8 flex gap-3">
+          <button 
+            onClick={onClose}
+            className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-xl transition-colors"
+          >
+            Отмена
+          </button>
+          <button 
+            onClick={onConfirm}
+            className="flex-1 bg-[#FFCC33] hover:bg-[#e6b82e] text-black font-bold py-3 rounded-xl transition-colors"
+          >
+            Сохранить
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
-  // State initialization with localStorage checks
+  // --- СОСТОЯНИЕ (STATE) ---
+  const [carMake, setCarMake] = useState(() => {
+    try {
+      const saved = localStorage.getItem('renault_calc_settings');
+      return saved ? JSON.parse(saved).carMake : '';
+    } catch (e) { return ''; }
+  });
+
+  const [carModel, setCarModel] = useState(() => {
+    try {
+      const saved = localStorage.getItem('renault_calc_settings');
+      return saved ? JSON.parse(saved).carModel : '';
+    } catch (e) { return ''; }
+  });
+
   const [auctionPrice, setAuctionPrice] = useState(() => {
     try {
-      const savedSettings = localStorage.getItem('renault_calc_settings');
-      return savedSettings ? JSON.parse(savedSettings).auctionPrice : '';
+      const saved = localStorage.getItem('renault_calc_settings');
+      return saved ? JSON.parse(saved).auctionPrice : '';
     } catch (e) { return ''; }
   });
 
   const [auctionType, setAuctionType] = useState(() => {
     try {
-      const savedSettings = localStorage.getItem('renault_calc_settings');
-      return savedSettings ? JSON.parse(savedSettings).auctionType : 'copart';
+      const saved = localStorage.getItem('renault_calc_settings');
+      return saved ? JSON.parse(saved).auctionType : 'copart';
     } catch (e) { return 'copart'; }
   });
 
   const [selectedCity, setSelectedCity] = useState(() => {
     try {
-      const savedSettings = localStorage.getItem('renault_calc_settings');
-      return savedSettings ? JSON.parse(savedSettings).selectedCity : '';
+      const saved = localStorage.getItem('renault_calc_settings');
+      return saved ? JSON.parse(saved).selectedCity : '';
     } catch (e) { return ''; }
   });
 
   const [destination, setDestination] = useState(() => {
     try {
-      const savedSettings = localStorage.getItem('renault_calc_settings');
-      return savedSettings ? JSON.parse(savedSettings).destination : 'ga';
+      const saved = localStorage.getItem('renault_calc_settings');
+      return saved ? JSON.parse(saved).destination : 'ga';
     } catch (e) { return 'ga'; }
   });
 
   const [history, setHistory] = useState([]);
   const [animateTotal, setAnimateTotal] = useState(false);
-
-  // Set Favicon - Improved logic
   
+  // Состояния модального окна
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [saveName, setSaveName] = useState('');
 
-  // Save Settings to LocalStorage whenever they change
+  // --- ЭФФЕКТЫ (EFFECTS) ---
+  // Установка фавикона
   useEffect(() => {
-    const settings = { auctionPrice, auctionType, selectedCity, destination };
-    localStorage.setItem('renault_calc_settings', JSON.stringify(settings));
-  }, [auctionPrice, auctionType, selectedCity, destination]);
+    const updateFavicon = () => {
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23FFCC33" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+          <circle cx="7" cy="17" r="2" />
+          <circle cx="17" cy="17" r="2" />
+        </svg>
+      `;
+      link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+    };
+    updateFavicon();
+  }, []);
 
-  // Load History from LocalStorage
+  // Сохранение настроек в LocalStorage
+  useEffect(() => {
+    const settings = { auctionPrice, auctionType, selectedCity, destination, carMake, carModel };
+    localStorage.setItem('renault_calc_settings', JSON.stringify(settings));
+  }, [auctionPrice, auctionType, selectedCity, destination, carMake, carModel]);
+
+  // Загрузка истории
   useEffect(() => {
     try {
       const saved = localStorage.getItem('renault_calc_history');
       if (saved) setHistory(JSON.parse(saved));
-    } catch (e) {
-      console.error("Error loading history", e);
-    }
+    } catch (e) { console.error("Error loading history", e); }
   }, []);
 
-  // Save History to LocalStorage
+  // Сохранение истории
   useEffect(() => {
     try {
       localStorage.setItem('renault_calc_history', JSON.stringify(history));
-    } catch (e) {
-      console.error("Error saving history", e);
-    }
+    } catch (e) { console.error("Error saving history", e); }
   }, [history]);
 
-  // Derived Data
-  const availableLocations = useMemo(() => {
-    return SHIPPING_DATA[auctionType] || [];
-  }, [auctionType]);
+  // --- ВЫЧИСЛЯЕМЫЕ ДАННЫЕ ---
+  const availableLocations = useMemo(() => SHIPPING_DATA[auctionType] || [], [auctionType]);
+  const currentRateObj = useMemo(() => availableLocations.find(l => l.city === selectedCity), [selectedCity, availableLocations]);
+  const shippingCost = useMemo(() => (currentRateObj && destination) ? currentRateObj.rates[destination] : null, [currentRateObj, destination]);
+  const totalCost = useMemo(() => (parseFloat(auctionPrice) || 0) + (shippingCost || 0), [auctionPrice, shippingCost]);
 
-  const currentRateObj = useMemo(() => {
-    if (!selectedCity) return null;
-    return availableLocations.find(l => l.city === selectedCity);
-  }, [selectedCity, availableLocations]);
-
-  const shippingCost = useMemo(() => {
-    if (!currentRateObj || !destination) return null;
-    return currentRateObj.rates[destination];
-  }, [currentRateObj, destination]);
-
-  const totalCost = useMemo(() => {
-    const price = parseFloat(auctionPrice) || 0;
-    const ship = shippingCost || 0;
-    return price + ship;
-  }, [auctionPrice, shippingCost]);
-
-  // Animation trigger for total change
   useEffect(() => {
     setAnimateTotal(true);
     const timer = setTimeout(() => setAnimateTotal(false), 300);
     return () => clearTimeout(timer);
   }, [totalCost]);
 
-  const handleSave = () => {
+  // --- ОБРАБОТЧИКИ ---
+  const handleOpenSaveModal = () => {
     if (!shippingCost) return;
+    // Предзаполняем имя сохранения маркой и моделью
+    const defaultName = carMake || carModel ? `${carMake} ${carModel}`.trim() : `Расчет от ${new Date().toLocaleDateString()}`;
+    setSaveName(defaultName);
+    setIsSaveModalOpen(true);
+  };
+
+  const handleConfirmSave = () => {
     const newEntry = {
       id: Date.now(),
+      name: saveName.trim() || `Расчет ${history.length + 1}`,
       date: new Date().toLocaleDateString(),
       auction: auctionType.toUpperCase(),
+      make: carMake,
+      model: carModel,
       city: selectedCity,
       dest: destination.toUpperCase(),
       price: parseFloat(auctionPrice) || 0,
@@ -479,11 +545,10 @@ export default function App() {
       total: totalCost
     };
     setHistory([newEntry, ...history]);
+    setIsSaveModalOpen(false);
   };
 
-  const deleteHistoryItem = (id) => {
-    setHistory(history.filter(h => h.id !== id));
-  };
+  const deleteHistoryItem = (id) => setHistory(history.filter(h => h.id !== id));
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-gray-200 font-sans selection:bg-[#FFCC33] selection:text-black">
@@ -491,10 +556,10 @@ export default function App() {
 
       <main className="max-w-4xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-12 gap-8">
         
-        {/* CALCULATOR COLUMN */}
+        {/* КОЛОНКА КАЛЬКУЛЯТОРА */}
         <div className="md:col-span-7 space-y-6">
           <div className="bg-[#121212] p-6 rounded-3xl border border-gray-800 shadow-2xl relative overflow-hidden">
-             {/* Decorative background blur */}
+             {/* Декоративное свечение */}
              <div className="absolute top-0 right-0 w-64 h-64 bg-[#FFCC33] opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
             <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
@@ -502,66 +567,56 @@ export default function App() {
               Расчет стоимости
             </h2>
 
-            {/* Step 1: Auction Price */}
-            <InputField label="Стоимость авто (лот)" icon={DollarSign}>
-              <CurrencyInput value={auctionPrice} onChange={setAuctionPrice} />
-            </InputField>
-
-            {/* Step 2: Auction House */}
-            <InputField label="Аукцион" icon={Anchor}>
-              <div className="grid grid-cols-3 gap-3">
-                {AUCTIONS.map(auc => {
-                  const Icon = auc.Icon;
-                  const isActive = auctionType === auc.id;
-                  return (
-                    <button
-                      key={auc.id}
-                      onClick={() => {
-                        setAuctionType(auc.id);
-                        setSelectedCity(''); // Reset city ONLY when manually clicking
-                      }}
-                      className={`
-                        relative py-4 px-2 rounded-xl text-sm font-bold transition-all duration-200 
-                        flex flex-col items-center justify-center gap-2
-                        ${isActive 
-                          ? 'bg-white text-black shadow-lg scale-[1.03] ring-2 ring-[#FFCC33] ring-offset-2 ring-offset-[#121212]' 
-                          : 'bg-[#1A1A1A] text-gray-400 hover:bg-[#252525] hover:text-white'
-                        }
-                      `}
-                    >
-                      <div className={`p-1.5 rounded-full ${isActive ? 'bg-black/5' : 'bg-white/5'}`}>
-                        <Icon />
-                      </div>
-                      <span>{auc.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </InputField>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Step 3: Location Selector */}
-              <InputField label="Город отправки" icon={MapPin}>
-                <Select
-                  value={selectedCity}
-                  onChange={setSelectedCity}
-                  options={availableLocations}
-                  placeholder="Выберите город..."
+            {/* Детали авто: Марка и Модель */}
+            <div className="grid grid-cols-2 gap-4">
+              <InputField label="Марка" icon={Tag}>
+                <Select 
+                  value={carMake} 
+                  onChange={setCarMake} 
+                  options={CAR_MAKES} 
+                  placeholder="Выберите марку..." 
+                  itemsAreStrings={true} 
                 />
               </InputField>
-
-              {/* Step 4: Destination */}
-              <InputField label="Порт назначения" icon={Anchor}>
-                <Select
-                  value={destination}
-                  onChange={setDestination}
-                  options={DESTINATIONS}
-                  placeholder="Выберите порт..."
+              <InputField label="Модель" icon={Info}>
+                <input 
+                  type="text"
+                  value={carModel}
+                  onChange={(e) => setCarModel(e.target.value)}
+                  placeholder="Напр. Prius"
+                  className="w-full bg-[#1A1A1A] text-white border border-gray-700 rounded-xl px-4 py-4 focus:outline-none focus:border-[#FFCC33] transition-all placeholder-gray-600"
                 />
               </InputField>
             </div>
 
-            {/* Error Message if route unavailable */}
+            <InputField label="Стоимость авто (лот)" icon={DollarSign}>
+              <CurrencyInput value={auctionPrice} onChange={setAuctionPrice} />
+            </InputField>
+
+            <InputField label="Аукцион" icon={Anchor}>
+              <div className="grid grid-cols-3 gap-3">
+                {AUCTIONS.map(auc => (
+                  <button
+                    key={auc.id}
+                    onClick={() => { setAuctionType(auc.id); setSelectedCity(''); }}
+                    className={`relative py-4 px-2 rounded-xl text-sm font-bold transition-all flex flex-col items-center gap-2 ${auctionType === auc.id ? 'bg-white text-black ring-2 ring-[#FFCC33]' : 'bg-[#1A1A1A] text-gray-400 hover:bg-[#252525]'}`}
+                  >
+                    <auc.Icon />
+                    <span>{auc.label}</span>
+                  </button>
+                ))}
+              </div>
+            </InputField>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <InputField label="Город отправки" icon={MapPin}>
+                <Select value={selectedCity} onChange={setSelectedCity} options={availableLocations} placeholder="Выберите город..." />
+              </InputField>
+              <InputField label="Порт назначения" icon={Anchor}>
+                <Select value={destination} onChange={setDestination} options={DESTINATIONS} placeholder="Выберите порт..." />
+              </InputField>
+            </div>
+
             {selectedCity && destination && shippingCost === null && (
               <div className="bg-red-900/20 border border-red-900/50 text-red-400 p-3 rounded-xl text-sm mb-4 text-center">
                 Маршрут недоступен в текущей сетке тарифов.
@@ -569,47 +624,35 @@ export default function App() {
             )}
           </div>
 
-          {/* Results Block */}
+          {/* Результаты */}
           <div className="bg-[#121212] p-6 rounded-3xl border border-gray-800">
             <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">Итоговая смета</h3>
             <div className="space-y-3">
-              <ResultCard 
-                label="Цена лота" 
-                value={parseFloat(auctionPrice) || 0} 
-                icon={Car}
-              />
+              <ResultCard label="Цена лота" value={parseFloat(auctionPrice) || 0} icon={Car} />
               <ResultCard 
                 label="Доставка по США (Суша)" 
                 value={shippingCost} 
                 subtext={selectedCity ? `${auctionType.toUpperCase()}: ${selectedCity} → ${destination.toUpperCase()}` : 'Выберите маршрут'}
                 icon={Truck}
               />
-              
               <div className="h-px bg-gray-800 my-2"></div>
-              
               <div className={`transform transition-all duration-300 ${animateTotal ? 'scale-[1.02]' : 'scale-100'}`}>
-                <ResultCard 
-                  label="ОБЩАЯ СТОИМОСТЬ" 
-                  value={totalCost} 
-                  isTotal={true}
-                  subtext="Цена авто + Логистика по США"
-                  icon={DollarSign}
-                />
+                <ResultCard label="ОБЩАЯ СТОИМОСТЬ" value={totalCost} isTotal={true} icon={DollarSign} />
               </div>
             </div>
 
             <button 
-              onClick={handleSave}
+              onClick={handleOpenSaveModal}
               disabled={!shippingCost}
-              className="w-full mt-6 bg-[#222] hover:bg-[#333] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group"
+              className="w-full mt-6 bg-[#222] hover:bg-[#333] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 group"
             >
-              <Save size={18} className="group-hover:text-[#FFCC33] transition-colors" />
+              <Save size={18} className="text-[#FFCC33] group-hover:scale-110 transition-transform" />
               Сохранить расчет
             </button>
           </div>
         </div>
 
-        {/* HISTORY COLUMN */}
+        {/* КОЛОНКА ИСТОРИИ */}
         <div className="md:col-span-5">
           <div className="bg-[#121212] rounded-3xl border border-gray-800 h-full overflow-hidden flex flex-col max-h-[800px]">
             <div className="p-6 border-b border-gray-800 bg-[#151515]">
@@ -622,42 +665,31 @@ export default function App() {
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
               {history.length === 0 ? (
                 <div className="text-center py-10 opacity-30">
-                  <div className="w-12 h-12 mx-auto mb-3 bg-gray-800 rounded-full flex items-center justify-center">
-                    <History size={24} />
-                  </div>
                   <p>Нет сохраненных расчетов</p>
                 </div>
               ) : (
                 history.map((item) => {
                   const AuctionIcon = AUCTIONS.find(a => a.id.toUpperCase() === item.auction.toUpperCase())?.Icon || Car;
                   return (
-                    <div key={item.id} className="bg-[#0A0A0A] border border-gray-800 p-4 rounded-xl hover:border-[#FFCC33]/50 transition-colors group relative">
+                    <div key={item.id} className="bg-[#0A0A0A] border border-gray-800 p-4 rounded-xl hover:border-[#FFCC33]/50 transition-colors group">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
-                           <div className="p-1 rounded-md bg-[#FFCC33]/10 text-[#FFCC33]">
-                              <AuctionIcon size={14} />
-                           </div>
-                          <span className="text-[#FFCC33] text-[10px] font-bold uppercase tracking-wider">
-                            {item.auction}
-                          </span>
-                          <span className="text-xs text-gray-600">|</span>
-                          <span className="text-xs text-gray-500">{item.date}</span>
+                           <div className="p-1 rounded-md bg-[#FFCC33]/10 text-[#FFCC33]"><AuctionIcon size={14} /></div>
+                           <span className="text-white text-sm font-bold truncate max-w-[120px]">{item.name}</span>
                         </div>
-                        <button 
-                          onClick={() => deleteHistoryItem(item.id)}
-                          className="text-gray-600 hover:text-red-500 transition-colors p-1"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <button onClick={() => deleteHistoryItem(item.id)} className="text-gray-600 hover:text-red-500 transition-colors p-1"><Trash2 size={14} /></button>
                       </div>
                       
-                      <div className="text-sm text-gray-300 mb-2 truncate flex items-center gap-2">
-                        <MapPin size={12} className="text-gray-600" />
-                        {item.city} <ArrowRight size={10} className="inline mx-1 text-gray-500" /> {item.dest}
+                      <div className="text-xs text-gray-400 mb-2">
+                        {item.make} {item.model} <span className="mx-1 opacity-30">|</span> {item.date}
+                      </div>
+
+                      <div className="text-[11px] text-gray-500 mb-2 truncate">
+                        {item.city} → {item.dest}
                       </div>
 
                       <div className="flex justify-between items-end border-t border-gray-800 pt-2 mt-2">
-                        <div className="text-xs text-gray-500">
+                        <div className="text-[10px] text-gray-600">
                           Лот: ${item.price} <br/>
                           Дост: ${item.shipping}
                         </div>
@@ -675,21 +707,32 @@ export default function App() {
 
       </main>
 
+      {/* МОДАЛЬНОЕ ОКНО СОХРАНЕНИЯ */}
+      <Modal 
+        isOpen={isSaveModalOpen} 
+        onClose={() => setIsSaveModalOpen(false)} 
+        onConfirm={handleConfirmSave}
+        title="Сохранение расчета"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-400 text-sm">Введите название для этого расчета, чтобы его было легче найти в истории:</p>
+          <input 
+            type="text"
+            autoFocus
+            value={saveName}
+            onChange={(e) => setSaveName(e.target.value)}
+            placeholder="Напр. Toyota Camry 2021 Белая"
+            className="w-full bg-[#1A1A1A] text-white border border-gray-700 rounded-xl px-4 py-4 focus:outline-none focus:border-[#FFCC33] transition-all"
+            onKeyDown={(e) => e.key === 'Enter' && handleConfirmSave()}
+          />
+        </div>
+      </Modal>
+
       <style>{`
         .font-display { font-family: 'Inter', sans-serif; }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #0A0A0A; 
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #333; 
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #555; 
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0A0A0A; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
       `}</style>
     </div>
   );
