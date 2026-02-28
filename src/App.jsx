@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   MapPin, Calculator, DollarSign, Save, Trash2, History, Anchor, 
   Truck, Car, Tag, Info, X, ShieldCheck, Ship, 
-  Zap, Fuel, Calendar, Globe 
+  Zap, Fuel, Calendar, Globe, Download, FileText, User
 } from 'lucide-react';
 
 // --- ДАННЫЕ ДЛЯ РАСЧЕТОВ (ИЗ ВАШИХ ФАЙЛОВ) ---
@@ -73,7 +73,7 @@ const SHIPPING_DATA = {
   ]
 };
 
-// --- ТАРИФЫ МОРСКОГО ФРАХТА (ОБНОВЛЕНЫ ПО СКРИНШОТУ ЗАКАЗЧИКА) ---
+// --- ТАРИФЫ МОРСКОГО ФРАХТА ---
 const OCEAN_FREIGHT_BASE = {
   nj: { klp: 575, od: 1250, poti: 1350 },
   ga: { klp: 675, od: 1350, poti: 1450 },
@@ -82,7 +82,6 @@ const OCEAN_FREIGHT_BASE = {
   ca: { klp: 1150, od: 1650, poti: 1750 }
 };
 
-// Убраны Внедорожник/Пикап
 const VEHICLE_TYPES = [
   { id: 'sedan', label: 'Седан', extra: 0, icon: Car },
   { id: 'suv', label: 'Кроссовер', extra: 150, icon: Car },
@@ -141,46 +140,31 @@ const calculateAuctionFee = (price, auction) => {
 const calculateUkraineCustoms = (price, year, volumeCm3, fuelType) => {
   const p = parseFloat(price) || 0;
   const vol = parseFloat(volumeCm3) || 0;
-  
-  // Кросс-курс НБУ EUR/USD (примерный). Акциз считается в евро.
   const EUR_TO_USD = 1.08; 
-  
   const currentYear = new Date().getFullYear();
-  // Возраст: Текущий год минус год выпуска минус 1 (но от 1 до 15 лет)
   let vehicleAge = currentYear - parseInt(year || currentYear) - 1;
   vehicleAge = Math.max(1, Math.min(15, vehicleAge)); 
 
-  if (p === 0) return { duty: 0, excise: 0, vat: 0, pension: 0, total: 0 };
-
-  // Пенсионный фонд рассчитывается от стоимости авто
-  // Пороги на 2024 год: до ~12800$ (3%), до ~22500$ (4%), свыше (5%)
-  let pensionRate = 0.03;
-  if (p > 12800) pensionRate = 0.04;
-  if (p > 22500) pensionRate = 0.05;
-  const pension = p * pensionRate;
+  if (p === 0) return { duty: 0, excise: 0, vat: 0, total: 0 };
 
   if (fuelType === 'electric') {
-    // Если введено < 200, предполагаем, что это емкость в кВт*ч, иначе берем 60
     const batteryCapacity = vol < 200 && vol > 0 ? vol : 60; 
     const excise = batteryCapacity * 1 * EUR_TO_USD; 
-    return { duty: 0, excise, vat: 0, pension, total: excise + pension };
+    return { duty: 0, excise, vat: 0, total: excise };
   }
 
   const duty = p * 0.10;
   let excise = 0;
 
   if (fuelType === 'hybrid') {
-    // Гибриды (HEV) имеют фиксированный акциз: 100 евро за 1 шт.
     excise = 100 * EUR_TO_USD;
   } else {
-    // Бензин и Дизель
     let baseRate = (fuelType === 'petrol') ? (vol <= 3000 ? 50 : 100) : (vol <= 3500 ? 75 : 150);
     excise = baseRate * (vol / 1000) * vehicleAge * EUR_TO_USD;
   }
 
   const vat = (p + duty + excise) * 0.20;
-
-  return { duty, excise, vat, pension, total: duty + excise + vat + pension };
+  return { duty, excise, vat, total: duty + excise + vat };
 };
 
 // --- COMPONENTS ---
@@ -220,14 +204,22 @@ export default function App() {
   const [engineVolume, setEngineVolume] = useState('2000');
   const [fuelType, setFuelType] = useState('petrol');
   
-  // Extra Fees
-  const brokerFee = 450;
-  const exportDocsFee = 150;
+  // Additional dynamic fees
+  const [extraFees, setExtraFees] = useState({
+    forwarding: '',
+    carrier: '',
+    broker: '',
+    dealer: ''
+  });
+  
   const [insuranceEnabled, setInsuranceEnabled] = useState(true);
 
   const [history, setHistory] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Modal State ('save' | 'pdf' | null)
+  const [modalMode, setModalMode] = useState(null);
   const [saveName, setSaveName] = useState('');
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // Calculations
   const auctionFee = useMemo(() => calculateAuctionFee(auctionPrice, auctionType), [auctionPrice, auctionType]);
@@ -238,7 +230,7 @@ export default function App() {
   const baseOcean = useMemo(() => OCEAN_FREIGHT_BASE[exitPort]?.[destPort] || 0, [exitPort, destPort]);
   const oceanCost = useMemo(() => baseOcean + vehicleExtra, [baseOcean, vehicleExtra]);
   
-  // Строго зафиксировано 175$ за опасный груз для электро и гибридов
+  // Опасный груз
   const dangerousGoodsFee = useMemo(() => {
     return (fuelType === 'electric' || fuelType === 'hybrid') ? 175 : 0;
   }, [fuelType]);
@@ -246,14 +238,25 @@ export default function App() {
   const insurance = useMemo(() => insuranceEnabled ? (parseFloat(auctionPrice) || 0) * 0.015 : 0, [auctionPrice, insuranceEnabled]);
   const customs = useMemo(() => calculateUkraineCustoms(auctionPrice, prodYear, engineVolume, fuelType), [auctionPrice, prodYear, engineVolume, fuelType]);
   
+  // Parsed Extra Fees
+  const fwd = parseFloat(extraFees.forwarding) || 0;
+  const car = parseFloat(extraFees.carrier) || 0;
+  const brk = parseFloat(extraFees.broker) || 0;
+  const dlr = parseFloat(extraFees.dealer) || 0;
+
   const totalCost = useMemo(() => {
     const p = parseFloat(auctionPrice) || 0;
-    return p + auctionFee + (landCost || 0) + oceanCost + dangerousGoodsFee + customs.total + brokerFee + exportDocsFee + insurance;
-  }, [auctionPrice, auctionFee, landCost, oceanCost, dangerousGoodsFee, customs, brokerFee, exportDocsFee, insurance]);
+    return p + auctionFee + (landCost || 0) + oceanCost + dangerousGoodsFee + customs.total + fwd + car + brk + dlr + insurance;
+  }, [auctionPrice, auctionFee, landCost, oceanCost, dangerousGoodsFee, customs, fwd, car, brk, dlr, insurance]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('w8_pro_history');
-    if (saved) setHistory(JSON.parse(saved));
+    const savedHistory = localStorage.getItem('w8_pro_history');
+    if (savedHistory) setHistory(JSON.parse(savedHistory));
+
+    const savedFees = localStorage.getItem('w8_extra_fees');
+    if (savedFees) {
+      try { setExtraFees(JSON.parse(savedFees)); } catch(e) {}
+    }
     
     // Перезаписываем тайтл и иконку вкладки в браузере
     document.title = "Car Commission Calculator";
@@ -268,6 +271,12 @@ export default function App() {
     }
   }, []);
 
+  const handleExtraFeeChange = (field, value) => {
+    const newFees = { ...extraFees, [field]: value };
+    setExtraFees(newFees);
+    localStorage.setItem('w8_extra_fees', JSON.stringify(newFees));
+  };
+
   // --- ЛОГИКА АВТОВЫБОРА САМОГО ДЕШЕВОГО ПОРТА ---
   const autoSelectCheapestPort = (city, destination, currentAuction) => {
     if (!city) return;
@@ -275,24 +284,20 @@ export default function App() {
     
     if (cityObj) {
       let minCost = Infinity;
-      let bestPort = 'nj'; // Фолбэк по умолчанию
+      let bestPort = 'nj'; 
       
       Object.keys(OCEAN_FREIGHT_BASE).forEach(port => {
         const lCost = cityObj.rates[port];
         if (lCost !== null && lCost !== undefined) {
           const oCost = OCEAN_FREIGHT_BASE[port]?.[destination] || 0;
           const totalDeliveryCost = lCost + oCost;
-          
           if (totalDeliveryCost < minCost) {
             minCost = totalDeliveryCost;
             bestPort = port;
           }
         }
       });
-      
-      if (minCost !== Infinity) {
-        setExitPort(bestPort);
-      }
+      if (minCost !== Infinity) setExitPort(bestPort);
     }
   };
 
@@ -318,242 +323,451 @@ export default function App() {
     const newHistory = [entry, ...history].slice(0, 10);
     setHistory(newHistory);
     localStorage.setItem('w8_pro_history', JSON.stringify(newHistory));
-    setIsModalOpen(false);
+    setModalMode(null);
+    setSaveName('');
+  };
+
+  const generatePDF = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      if (!window.html2pdf) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+
+      // Находим шаблон инвойса
+      const element = document.getElementById('pdf-invoice-template');
+      
+      const opt = {
+        margin:       0.3, // Небольшие отступы, чтобы все влезло
+        filename:     `${saveName || 'W8_Calculation'}.pdf`,
+        image:        { type: 'jpeg', quality: 1 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+
+      await window.html2pdf().set(opt).from(element).save();
+      setModalMode(null);
+      setSaveName('');
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      alert('Ошибка при создании PDF документа. Попробуйте еще раз.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleModalSubmit = () => {
+    if (modalMode === 'save') saveToHistory();
+    if (modalMode === 'pdf') generatePDF();
   };
 
   return (
-    <div className="min-h-screen bg-[#0F0F0F] text-gray-200 font-sans selection:bg-[#FFCC33] selection:text-black">
-      {/* Header */}
-      <header className="bg-black text-white sticky top-0 z-50 border-b border-gray-800 py-4 px-6 flex items-center justify-between shadow-2xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#FFCC33] text-black rounded-lg flex items-center justify-center transform rotate-3 shadow-[0_0_15px_rgba(255,204,51,0.5)] cursor-pointer">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
-              <circle cx="7" cy="17" r="2" />
-              <circle cx="17" cy="17" r="2" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="font-bold text-lg sm:text-xl tracking-wide uppercase leading-none">Car Commission</h1>
-            <span className="text-[10px] text-[#FFCC33] tracking-[0.2em] font-medium uppercase">Calculator</span>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* INPUTS COLUMN */}
-        <div className="lg:col-span-8 space-y-6">
+    <div className="relative overflow-x-hidden min-h-screen bg-[#0F0F0F] text-gray-200 font-sans selection:bg-[#FFCC33] selection:text-black">
+      
+      {/* СКРЫТЫЙ ШАБЛОН ДЛЯ PDF */}
+      <div style={{ position: 'absolute', top: 0, left: 0, zIndex: -10, pointerEvents: 'none' }}>
+        <div id="pdf-invoice-template" style={{ width: '800px', backgroundColor: '#ffffff', color: '#000000', padding: '40px', boxSizing: 'border-box', fontFamily: 'sans-serif' }}>
           
-          {/* STEP 1: CAR */}
-          <div className="bg-[#161616] rounded-[2rem] p-6 sm:p-8 border border-gray-800 shadow-xl space-y-8">
-            <h2 className="text-xl font-bold text-white flex items-center gap-3">
-              <Car className="text-[#FFCC33]" size={20} />
-              1. Автомобиль и параметры лота
-            </h2>
-
-            <div className="grid grid-cols-3 gap-3">
-              {VEHICLE_TYPES.map(type => (
-                <button
-                  key={type.id}
-                  onClick={() => setVehicleType(type.id)}
-                  className={`p-4 rounded-2xl flex flex-col items-center gap-2 border transition-all cursor-pointer ${vehicleType === type.id ? 'bg-[#FFCC33] border-[#FFCC33] text-black shadow-lg shadow-[#FFCC33]/20' : 'bg-[#1F1F1F] border-gray-800 hover:border-gray-500'}`}
-                >
-                  <type.icon size={20} />
-                  <span className="text-[10px] font-bold uppercase text-center leading-tight">{type.label}</span>
-                </button>
-              ))}
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #333', paddingBottom: '20px', marginBottom: '30px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <div style={{ width: '50px', height: '50px', backgroundColor: '#FFCC33', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                  <circle cx="7" cy="17" r="2" />
+                  <circle cx="17" cy="17" r="2" />
+                </svg>
+              </div>
+              <div>
+                <h1 style={{ fontSize: '26px', fontWeight: 'bold', textTransform: 'uppercase', margin: 0, color: '#000' }}>Car Commission</h1>
+                <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#666', letterSpacing: '2px' }}>Calculator</span>
+              </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <InputWrapper label="Год" icon={Calendar}>
-                <select value={prodYear} onChange={(e) => setProdYear(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33] transition-colors">
-                  {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
-              </InputWrapper>
-
-              <InputWrapper label="Объем (см3) / Емкость (кВт)" icon={Zap}>
-                <input type="number" value={engineVolume} onChange={(e) => setEngineVolume(e.target.value)} placeholder="2000" className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none focus:border-[#FFCC33] cursor-pointer" />
-              </InputWrapper>
+            <div style={{ textAlign: 'right' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 5px 0', color: '#333' }}>Смета # {Date.now().toString().slice(-6)}</h2>
+              <p style={{ fontSize: '14px', margin: 0, color: '#666' }}>Дата: {new Date().toLocaleDateString()}</p>
             </div>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <InputWrapper label="Тип топлива" icon={Fuel}>
-                <div className="flex gap-2 bg-[#1F1F1F] p-1 rounded-xl border border-gray-800">
-                  {FUEL_TYPES.map(f => (
-                    <button key={f.id} onClick={() => setFuelType(f.id)} className={`flex-1 py-2 text-[10px] sm:text-xs font-bold rounded-lg transition-all cursor-pointer ${fuelType === f.id ? 'bg-[#333] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-              </InputWrapper>
+          {/* Parameters */}
+          <div style={{ marginBottom: '30px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 'bold', borderBottom: '1px solid #e5e7eb', paddingBottom: '10px', marginBottom: '15px', color: '#000' }}>Параметры лота</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: '10px', fontSize: '14px', color: '#000' }}>
+              <div><span style={{ color: '#666', marginRight: '8px' }}>Тип кузова:</span> <b>{VEHICLE_TYPES.find(t=>t.id===vehicleType)?.label}</b></div>
+              <div><span style={{ color: '#666', marginRight: '8px' }}>Год выпуска:</span> <b>{prodYear}</b></div>
+              <div><span style={{ color: '#666', marginRight: '8px' }}>Тип топлива:</span> <b>{FUEL_TYPES.find(t=>t.id===fuelType)?.label}</b></div>
+              <div><span style={{ color: '#666', marginRight: '8px' }}>Объем / Емкость:</span> <b>{engineVolume} {fuelType === 'electric' ? 'кВт' : 'см3'}</b></div>
+              <div><span style={{ color: '#666', marginRight: '8px' }}>Аукцион:</span> <b style={{ textTransform: 'uppercase' }}>{auctionType}</b></div>
+              <div><span style={{ color: '#666', marginRight: '8px' }}>Локация (США):</span> <b>{selectedCity || 'Не указана'}</b></div>
+              <div><span style={{ color: '#666', marginRight: '8px' }}>Маршрут:</span> <b style={{ textTransform: 'uppercase' }}>{exitPort} ➔ {destPort}</b></div>
+              <div><span style={{ color: '#666', marginRight: '8px' }}>Название авто:</span> <b>{saveName || 'Без названия'}</b></div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <h3 style={{ fontSize: '18px', fontWeight: 'bold', borderBottom: '1px solid #e5e7eb', paddingBottom: '10px', marginBottom: '15px', color: '#000' }}>Детализация стоимости</h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f3f4f6', color: '#374151' }}>
+                <th style={{ padding: '12px', borderBottom: '1px solid #d1d5db', textAlign: 'left', fontWeight: 'bold' }}>Статья расходов</th>
+                <th style={{ padding: '12px', borderBottom: '1px solid #d1d5db', textAlign: 'right', fontWeight: 'bold' }}>Сумма ($)</th>
+              </tr>
+            </thead>
+            <tbody style={{ fontSize: '14px' }}>
+              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Цена лота на аукционе</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 'bold', fontFamily: 'monospace' }}>${Math.round(auctionPrice||0).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Аукционный сбор ({auctionType.toUpperCase()})</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(auctionFee).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Доставка по США (до порта {exitPort.toUpperCase()})</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(landCost||0).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Морской фрахт (до {destPort.toUpperCase()})</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(oceanCost).toLocaleString()}</td></tr>
               
-              <InputWrapper label="Цена аукциона ($)" icon={DollarSign}>
-                <input type="number" value={auctionPrice} onChange={(e) => setAuctionPrice(e.target.value)} placeholder="0" className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer text-lg shadow-inner" />
-              </InputWrapper>
-            </div>
-          </div>
+              {dangerousGoodsFee > 0 && (
+                <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Надбавка за опасный груз (Батарея)</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(dangerousGoodsFee).toLocaleString()}</td></tr>
+              )}
+              {insurance > 0 && (
+                <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Страхование груза (1.5%)</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(insurance).toLocaleString()}</td></tr>
+              )}
+              
+              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Таможенные платежи (Пошлина, Акциз, НДС)</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(customs.total).toLocaleString()}</td></tr>
+              
+              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Экспедирование Клайпеда</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(fwd).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Автовоз в Украину</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(car).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Брокерские услуги</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(brk).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Комиссия дилера</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(dlr).toLocaleString()}</td></tr>
+            </tbody>
+          </table>
 
-          {/* STEP 2: LOGISTICS */}
-          <div className="bg-[#161616] rounded-[2rem] p-6 sm:p-8 border border-gray-800 shadow-xl space-y-8">
-            <h2 className="text-xl font-bold text-white flex items-center gap-3">
-              <Globe className="text-[#FFCC33]" size={20} />
-              2. Логистика и Маршрут
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <InputWrapper label="Аукцион" icon={Anchor}>
-                <div className="flex gap-2 bg-[#1F1F1F] p-1 rounded-xl border border-gray-800">
-                  {AUCTIONS.map(a => (
-                    <button key={a.id} onClick={() => { setAuctionType(a.id); setSelectedCity(''); }} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${auctionType === a.id ? 'bg-[#333] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
-                      {a.label}
-                    </button>
-                  ))}
-                </div>
-              </InputWrapper>
-
-              <InputWrapper label="Площадка (USA)" icon={MapPin}>
-                <select value={selectedCity} onChange={handleCityChange} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
-                  <option value="">Выберите город</option>
-                  {SHIPPING_DATA[auctionType].map(l => <option key={l.city} value={l.city}>{l.city}</option>)}
-                </select>
-              </InputWrapper>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <InputWrapper label="Порт выхода (USA)" icon={Ship}>
-                <select value={exitPort} onChange={(e) => setExitPort(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
-                  {EXIT_PORTS.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
-                </select>
-              </InputWrapper>
-
-              <InputWrapper label="Порт назначения" icon={Anchor}>
-                <select value={destPort} onChange={handleDestPortChange} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
-                  {DEST_PORTS.map(d => <option key={d.id} value={d.id} disabled={d.disabled}>{d.label}</option>)}
-                </select>
-              </InputWrapper>
-            </div>
-            
-            <div className="flex items-center gap-4 bg-[#1F1F1F] p-4 rounded-2xl border border-gray-800 hover:border-gray-700 transition-colors">
-              <div className="flex-1">
-                <div className="text-xs font-bold text-gray-400 uppercase mb-1">Страхование (1.5%)</div>
-                <div className="text-[10px] text-gray-600 font-bold">Полное покрытие повреждений при доставке</div>
-              </div>
-              <button 
-                onClick={() => setInsuranceEnabled(!insuranceEnabled)}
-                className={`w-14 h-8 rounded-full transition-all relative cursor-pointer ${insuranceEnabled ? 'bg-[#FFCC33]' : 'bg-gray-700'}`}
-              >
-                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${insuranceEnabled ? 'left-7' : 'left-1'}`} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: SUMMARY */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-[#161616] rounded-[2.5rem] border border-gray-800 sticky top-24 overflow-hidden shadow-2xl">
-            <div className="p-6 border-b border-gray-800 bg-[#1A1A1A]">
-              <h3 className="font-bold flex items-center gap-2 text-white uppercase text-sm tracking-widest">
-                <ShieldCheck size={18} className="text-[#FFCC33]" />
-                Полная смета
-              </h3>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div className="space-y-1">
-                <PriceItem label="Стоимость авто" value={auctionPrice} />
-                <PriceItem label="Аукционный сбор" value={auctionFee} subtext={`Аукцион: ${auctionType.toUpperCase()}`} />
-              </div>
-
-              <div className="h-px bg-gray-800/50" />
-
-              <div className="space-y-1">
-                <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Логистика (Logistics)</div>
-                <PriceItem label="Доставка (USA Land)" value={landCost} highlight={landCost === null} />
-                <PriceItem label="Фрахт (Ocean)" value={oceanCost} subtext={`Порт: ${destPort.toUpperCase()}`} />
-                {dangerousGoodsFee > 0 && (
-                  <PriceItem label="Опасный груз" value={dangerousGoodsFee} subtext="Батарея (Электро/Гибрид)" />
-                )}
-                <PriceItem label="Страховка" value={insurance} />
-              </div>
-
-              <div className="h-px bg-gray-800/50" />
-
-              <div className="space-y-1">
-                <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Таможня (Customs UA)</div>
-                <PriceItem label="Пошлина + Акциз + НДС" value={customs.total - customs.pension} />
-                <PriceItem label="Пенсионный фонд" value={customs.pension} />
-              </div>
-
-              <div className="h-px bg-gray-800/50" />
-
-              <div className="space-y-1">
-                <PriceItem label="Брокер + Экспорт" value={brokerFee + exportDocsFee} subtext="Оформление и документация" />
-              </div>
-
-              <div className="pt-6 mt-6 border-t border-gray-800">
-                <div className="text-[10px] font-bold text-gray-500 uppercase mb-2">ИТОГО ПОД КЛЮЧ</div>
-                <div className="text-5xl font-black text-[#FFCC33] font-mono leading-none tracking-tighter">
-                  ${Math.round(totalCost).toLocaleString()}
-                </div>
-              </div>
-
-              <button 
-                onClick={() => setIsModalOpen(true)}
-                className="w-full mt-6 bg-[#FFCC33] hover:bg-[#E6B82E] text-black font-black py-5 rounded-2xl transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-[#FFCC33]/10 cursor-pointer uppercase text-xs tracking-[0.2em]"
-              >
-                Сохранить расчет
-              </button>
+          {/* Total Block */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '30px' }}>
+            <div style={{ backgroundColor: '#FFCC33', padding: '20px 30px', borderRadius: '12px', textAlign: 'right', color: '#000' }}>
+              <div style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Итого под ключ</div>
+              <div style={{ fontSize: '36px', fontWeight: '900', fontFamily: 'monospace', lineHeight: 1 }}>${Math.round(totalCost).toLocaleString()}</div>
             </div>
           </div>
           
-          {/* History */}
-          <div className="bg-[#161616] rounded-3xl border border-gray-800 p-6">
-            <h3 className="font-bold text-[10px] text-gray-500 uppercase mb-4 flex items-center gap-2">
-              <History size={14} /> История (History)
-            </h3>
-            <div className="space-y-3">
-              {history.length === 0 ? (
-                <div className="text-xs text-gray-700 italic">История пуста</div>
-              ) : (
-                history.map(item => (
-                  <div key={item.id} className="bg-[#1F1F1F] p-3 rounded-xl border border-gray-800 flex justify-between items-center group cursor-pointer hover:border-[#FFCC33]/40 transition-colors">
-                    <div>
-                      <div className="text-[9px] text-gray-500">{item.date}</div>
-                      <div className="text-xs font-bold text-white">{item.name}</div>
-                    </div>
-                    <div className="text-[#FFCC33] font-mono font-bold text-sm">${Math.round(item.total).toLocaleString()}</div>
-                  </div>
-                ))
-              )}
+          <div style={{ marginTop: '50px', textAlign: 'center', fontSize: '12px', color: '#9ca3af' }}>
+            Документ сгенерирован автоматически системой Car Commission Calculator.
+          </div>
+        </div>
+      </div>
+
+      {/* ОСНОВНОЕ ПРИЛОЖЕНИЕ */}
+      <div className="relative z-10 bg-[#0F0F0F] min-h-screen pb-10">
+        {/* Header */}
+        <header className="bg-black text-white sticky top-0 z-50 border-b border-gray-800 py-4 px-6 flex items-center justify-between shadow-2xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#FFCC33] text-black rounded-lg flex items-center justify-center transform rotate-3 shadow-[0_0_15px_rgba(255,204,51,0.5)] cursor-pointer">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                <circle cx="7" cy="17" r="2" />
+                <circle cx="17" cy="17" r="2" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="font-bold text-lg sm:text-xl tracking-wide uppercase leading-none">Car Commission</h1>
+              <span className="text-[10px] text-[#FFCC33] tracking-[0.2em] font-medium uppercase">Calculator</span>
             </div>
           </div>
-        </div>
-      </main>
+        </header>
 
-      {/* SAVE MODAL */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/95 backdrop-blur-sm cursor-pointer" onClick={() => setIsModalOpen(false)} />
-          <div className="bg-[#161616] border border-gray-800 rounded-[2.5rem] p-8 w-full max-w-sm relative z-10 shadow-2xl">
-            <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-widest text-center">Название</h3>
-            <input 
-              type="text" 
-              placeholder="Напр. Tesla Model Y" 
-              value={saveName} 
-              onChange={(e) => setSaveName(e.target.value)} 
-              className="w-full bg-[#1F1F1F] border border-gray-800 rounded-2xl px-6 py-4 outline-none text-white focus:border-[#FFCC33] cursor-pointer mb-6"
-              autoFocus
-            />
-            <button 
-              onClick={saveToHistory} 
-              className="w-full bg-[#FFCC33] text-black font-black py-4 rounded-2xl hover:bg-[#E6B82E] transition-all cursor-pointer uppercase tracking-widest text-xs"
-            >
-              Подтвердить
-            </button>
+        <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* INPUTS COLUMN */}
+          <div className="lg:col-span-8 space-y-6">
+            
+            {/* STEP 1: CAR */}
+            <div className="bg-[#161616] rounded-[2rem] p-6 sm:p-8 border border-gray-800 shadow-xl space-y-8">
+              <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                <Car className="text-[#FFCC33]" size={20} />
+                1. Автомобиль и параметры лота
+              </h2>
+
+              <div className="grid grid-cols-3 gap-3">
+                {VEHICLE_TYPES.map(type => (
+                  <button
+                    key={type.id}
+                    onClick={() => setVehicleType(type.id)}
+                    className={`p-4 rounded-2xl flex flex-col items-center gap-2 border transition-all cursor-pointer ${vehicleType === type.id ? 'bg-[#FFCC33] border-[#FFCC33] text-black shadow-lg shadow-[#FFCC33]/20' : 'bg-[#1F1F1F] border-gray-800 hover:border-gray-500'}`}
+                  >
+                    <type.icon size={20} />
+                    <span className="text-[10px] font-bold uppercase text-center leading-tight">{type.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InputWrapper label="Год" icon={Calendar}>
+                  <select value={prodYear} onChange={(e) => setProdYear(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33] transition-colors">
+                    {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </InputWrapper>
+
+                <InputWrapper label="Объем (см3) / Емкость (кВт)" icon={Zap}>
+                  <input type="number" value={engineVolume} onChange={(e) => setEngineVolume(e.target.value)} placeholder="2000" className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none focus:border-[#FFCC33] cursor-pointer" />
+                </InputWrapper>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InputWrapper label="Тип топлива" icon={Fuel}>
+                  <div className="flex gap-2 bg-[#1F1F1F] p-1 rounded-xl border border-gray-800">
+                    {FUEL_TYPES.map(f => (
+                      <button key={f.id} onClick={() => setFuelType(f.id)} className={`flex-1 py-2 text-[10px] sm:text-xs font-bold rounded-lg transition-all cursor-pointer ${fuelType === f.id ? 'bg-[#333] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </InputWrapper>
+                
+                <InputWrapper label="Цена аукциона ($)" icon={DollarSign}>
+                  <input type="number" value={auctionPrice} onChange={(e) => setAuctionPrice(e.target.value)} placeholder="0" className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer text-lg shadow-inner" />
+                </InputWrapper>
+              </div>
+            </div>
+
+            {/* STEP 2: LOGISTICS */}
+            <div className="bg-[#161616] rounded-[2rem] p-6 sm:p-8 border border-gray-800 shadow-xl space-y-8">
+              <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                <Globe className="text-[#FFCC33]" size={20} />
+                2. Логистика и Маршрут
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InputWrapper label="Аукцион" icon={Anchor}>
+                  <div className="flex gap-2 bg-[#1F1F1F] p-1 rounded-xl border border-gray-800">
+                    {AUCTIONS.map(a => (
+                      <button key={a.id} onClick={() => { setAuctionType(a.id); setSelectedCity(''); }} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${auctionType === a.id ? 'bg-[#333] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                </InputWrapper>
+
+                <InputWrapper label="Площадка (USA)" icon={MapPin}>
+                  <select value={selectedCity} onChange={handleCityChange} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
+                    <option value="">Выберите город</option>
+                    {SHIPPING_DATA[auctionType].map(l => <option key={l.city} value={l.city}>{l.city}</option>)}
+                  </select>
+                </InputWrapper>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InputWrapper label="Порт выхода (USA)" icon={Ship}>
+                  <select value={exitPort} onChange={(e) => setExitPort(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
+                    {EXIT_PORTS.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+                  </select>
+                </InputWrapper>
+
+                <InputWrapper label="Порт назначения" icon={Anchor}>
+                  <select value={destPort} onChange={handleDestPortChange} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
+                    {DEST_PORTS.map(d => <option key={d.id} value={d.id} disabled={d.disabled}>{d.label}</option>)}
+                  </select>
+                </InputWrapper>
+              </div>
+              
+              <div className="flex items-center gap-4 bg-[#1F1F1F] p-4 rounded-2xl border border-gray-800 hover:border-gray-700 transition-colors">
+                <div className="flex-1">
+                  <div className="text-xs font-bold text-gray-400 uppercase mb-1">Страхование (1.5%)</div>
+                  <div className="text-[10px] text-gray-600 font-bold">Полное покрытие повреждений при доставке</div>
+                </div>
+                <button 
+                  onClick={() => setInsuranceEnabled(!insuranceEnabled)}
+                  className={`w-14 h-8 rounded-full transition-all relative cursor-pointer ${insuranceEnabled ? 'bg-[#FFCC33]' : 'bg-gray-700'}`}
+                >
+                  <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${insuranceEnabled ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* STEP 3: ADDITIONAL FEES */}
+            <div className="bg-[#161616] rounded-[2rem] p-6 sm:p-8 border border-gray-800 shadow-xl space-y-8">
+              <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                <Calculator className="text-[#FFCC33]" size={20} />
+                3. Дополнительные расходы
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InputWrapper label="Экспедирование Клайпеда ($)" icon={Anchor}>
+                  <input 
+                    type="number" 
+                    value={extraFees.forwarding} 
+                    onChange={(e) => handleExtraFeeChange('forwarding', e.target.value)} 
+                    placeholder="0" 
+                    className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer shadow-inner" 
+                  />
+                </InputWrapper>
+
+                <InputWrapper label="Автовоз в Украину ($)" icon={Truck}>
+                  <input 
+                    type="number" 
+                    value={extraFees.carrier} 
+                    onChange={(e) => handleExtraFeeChange('carrier', e.target.value)} 
+                    placeholder="0" 
+                    className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer shadow-inner" 
+                  />
+                </InputWrapper>
+                
+                <InputWrapper label="Брокер ($)" icon={FileText}>
+                  <input 
+                    type="number" 
+                    value={extraFees.broker} 
+                    onChange={(e) => handleExtraFeeChange('broker', e.target.value)} 
+                    placeholder="0" 
+                    className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer shadow-inner" 
+                  />
+                </InputWrapper>
+                
+                <InputWrapper label="Диллер (Комиссия) ($)" icon={User}>
+                  <input 
+                    type="number" 
+                    value={extraFees.dealer} 
+                    onChange={(e) => handleExtraFeeChange('dealer', e.target.value)} 
+                    placeholder="0" 
+                    className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer shadow-inner" 
+                  />
+                </InputWrapper>
+              </div>
+            </div>
+
           </div>
-        </div>
-      )}
+
+          {/* RIGHT COLUMN: SUMMARY */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="bg-[#161616] rounded-[2.5rem] border border-gray-800 sticky top-24 shadow-2xl overflow-hidden flex flex-col">
+              
+              <div className="bg-[#161616] flex-1">
+                <div className="p-6 border-b border-gray-800 bg-[#1A1A1A]">
+                  <h3 className="font-bold flex items-center gap-2 text-white uppercase text-sm tracking-widest">
+                    <ShieldCheck size={18} className="text-[#FFCC33]" />
+                    Полная смета
+                  </h3>
+                </div>
+                
+                <div className="p-6 space-y-4">
+                  <div className="space-y-1">
+                    <PriceItem label="Стоимость авто" value={auctionPrice} />
+                    <PriceItem label="Аукционный сбор" value={auctionFee} subtext={`Аукцион: ${auctionType.toUpperCase()}`} />
+                  </div>
+
+                  <div className="h-px bg-gray-800/50" />
+
+                  <div className="space-y-1">
+                    <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Логистика (Logistics)</div>
+                    <PriceItem label="Доставка (USA Land)" value={landCost} highlight={landCost === null} />
+                    <PriceItem label="Фрахт (Ocean)" value={oceanCost} subtext={`Порт: ${destPort.toUpperCase()}`} />
+                    {dangerousGoodsFee > 0 && (
+                      <PriceItem label="Опасный груз" value={dangerousGoodsFee} subtext="Батарея (Электро/Гибрид)" />
+                    )}
+                    <PriceItem label="Страховка" value={insurance} />
+                  </div>
+
+                  <div className="h-px bg-gray-800/50" />
+
+                  <div className="space-y-1">
+                    <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Таможня (Customs UA)</div>
+                    <PriceItem label="Пошлина + Акциз + НДС" value={customs.total} />
+                  </div>
+
+                  <div className="h-px bg-gray-800/50" />
+
+                  <div className="space-y-1">
+                    <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Локальные расходы и услуги</div>
+                    <PriceItem label="Экспедирование Клайпеда" value={fwd} />
+                    <PriceItem label="Автовоз в Украину" value={car} />
+                    <PriceItem label="Брокерские услуги" value={brk} />
+                    <PriceItem label="Комиссия дилера" value={dlr} />
+                  </div>
+
+                  <div className="pt-6 mt-6 border-t border-gray-800">
+                    <div className="text-[10px] font-bold text-gray-500 uppercase mb-2">ИТОГО ПОД КЛЮЧ</div>
+                    <div className="text-5xl font-black text-[#FFCC33] font-mono leading-none tracking-tighter">
+                      ${Math.round(totalCost).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* BUTTONS */}
+              <div className="p-6 pt-0 flex gap-3">
+                <button 
+                  onClick={() => setModalMode('save')}
+                  className="flex-1 bg-[#1F1F1F] hover:bg-[#333] text-white font-bold py-4 rounded-2xl transition-all hover:scale-[1.02] active:scale-95 border border-gray-700 cursor-pointer uppercase text-[10px] tracking-[0.1em] flex flex-col items-center justify-center gap-1"
+                >
+                  <Save size={18} />
+                  <span>В историю</span>
+                </button>
+                <button 
+                  onClick={() => setModalMode('pdf')}
+                  className="flex-[2] bg-[#FFCC33] hover:bg-[#E6B82E] text-black font-black py-4 rounded-2xl transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-[#FFCC33]/10 cursor-pointer uppercase text-[11px] tracking-[0.1em] flex flex-col items-center justify-center gap-1"
+                >
+                  <FileText size={18} />
+                  <span>Скачать PDF</span>
+                </button>
+              </div>
+            </div>
+            
+            {/* History */}
+            <div className="bg-[#161616] rounded-3xl border border-gray-800 p-6">
+              <h3 className="font-bold text-[10px] text-gray-500 uppercase mb-4 flex items-center gap-2">
+                <History size={14} /> История (History)
+              </h3>
+              <div className="space-y-3">
+                {history.length === 0 ? (
+                  <div className="text-xs text-gray-700 italic">История пуста</div>
+                ) : (
+                  history.map(item => (
+                    <div key={item.id} className="bg-[#1F1F1F] p-3 rounded-xl border border-gray-800 flex justify-between items-center group cursor-pointer hover:border-[#FFCC33]/40 transition-colors">
+                      <div>
+                        <div className="text-[9px] text-gray-500">{item.date}</div>
+                        <div className="text-xs font-bold text-white">{item.name}</div>
+                      </div>
+                      <div className="text-[#FFCC33] font-mono font-bold text-sm">${Math.round(item.total).toLocaleString()}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {/* MODAL */}
+        {modalMode && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/95 backdrop-blur-sm cursor-pointer" onClick={() => setModalMode(null)} />
+            <div className="bg-[#161616] border border-gray-800 rounded-[2.5rem] p-8 w-full max-w-sm relative z-10 shadow-2xl">
+              <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-widest text-center">
+                {modalMode === 'pdf' ? 'Имя файла для PDF' : 'Название лота'}
+              </h3>
+              <input 
+                type="text" 
+                placeholder="Напр. Tesla Model Y" 
+                value={saveName} 
+                onChange={(e) => setSaveName(e.target.value)} 
+                className="w-full bg-[#1F1F1F] border border-gray-800 rounded-2xl px-6 py-4 outline-none text-white focus:border-[#FFCC33] cursor-pointer mb-6"
+                autoFocus
+              />
+              <button 
+                onClick={handleModalSubmit} 
+                disabled={isGeneratingPdf}
+                className={`w-full text-black font-black py-4 rounded-2xl transition-all cursor-pointer uppercase tracking-widest text-xs flex justify-center items-center gap-2
+                  ${isGeneratingPdf ? 'bg-[#E6B82E] opacity-70 cursor-wait' : 'bg-[#FFCC33] hover:bg-[#E6B82E]'}`}
+              >
+                {isGeneratingPdf ? (
+                  'Генерация документа...'
+                ) : (
+                  <>
+                    {modalMode === 'pdf' ? <Download size={16} /> : <Save size={16} />}
+                    {modalMode === 'pdf' ? 'Скачать документ' : 'Подтвердить'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <style>{`
         ::-webkit-scrollbar { width: 4px; }
