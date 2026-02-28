@@ -258,7 +258,6 @@ export default function App() {
       try { setExtraFees(JSON.parse(savedFees)); } catch(e) {}
     }
     
-    // Перезаписываем тайтл и иконку вкладки в браузере
     document.title = "Car Commission Calculator";
     const link = document.querySelector("link[rel~='icon']");
     if (link) {
@@ -277,7 +276,6 @@ export default function App() {
     localStorage.setItem('w8_extra_fees', JSON.stringify(newFees));
   };
 
-  // --- ЛОГИКА АВТОВЫБОРА САМОГО ДЕШЕВОГО ПОРТА ---
   const autoSelectCheapestPort = (city, destination, currentAuction) => {
     if (!city) return;
     const cityObj = SHIPPING_DATA[currentAuction]?.find(c => c.city === city);
@@ -329,6 +327,11 @@ export default function App() {
 
   const generatePDF = async () => {
     setIsGeneratingPdf(true);
+    
+    // Сбрасываем скролл на самый верх перед генерацией, 
+    // чтобы html2canvas не захватил пустое пространство из-за прокрутки пользователя
+    window.scrollTo(0, 0);
+
     try {
       if (!window.html2pdf) {
         await new Promise((resolve, reject) => {
@@ -340,14 +343,14 @@ export default function App() {
         });
       }
 
-      // Находим шаблон инвойса
       const element = document.getElementById('pdf-invoice-template');
       
       const opt = {
-        margin:       0.3, // Небольшие отступы, чтобы все влезло
+        margin:       0.2, // Уменьшенные отступы документа
         filename:     `${saveName || 'W8_Calculation'}.pdf`,
         image:        { type: 'jpeg', quality: 1 },
-        html2canvas:  { scale: 2, useCORS: true },
+        // scrollY: 0 и scrollX: 0 жестко фиксируют позицию рендера, предотвращая баг с пустым местом сверху
+        html2canvas:  { scale: 2, useCORS: true, scrollY: 0, scrollX: 0 },
         jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
 
@@ -370,35 +373,38 @@ export default function App() {
   return (
     <div className="relative overflow-x-hidden min-h-screen bg-[#0F0F0F] text-gray-200 font-sans selection:bg-[#FFCC33] selection:text-black">
       
-      {/* СКРЫТЫЙ ШАБЛОН ДЛЯ PDF */}
-      <div style={{ position: 'absolute', top: 0, left: 0, zIndex: -10, pointerEvents: 'none' }}>
-        <div id="pdf-invoice-template" style={{ width: '800px', backgroundColor: '#ffffff', color: '#000000', padding: '40px', boxSizing: 'border-box', fontFamily: 'sans-serif' }}>
+      {/* СКРЫТЫЙ ШАБЛОН ДЛЯ PDF 
+        Ширина 750px идеально ложится на А4 без горизонтального переполнения.
+        Внутренние отступы уменьшены (с 12px до 8px), чтобы все компактно влезло на 1 страницу.
+      */}
+      <div style={{ position: 'absolute', top: 0, left: 0, zIndex: -100, pointerEvents: 'none' }}>
+        <div id="pdf-invoice-template" style={{ width: '750px', backgroundColor: '#ffffff', color: '#000000', padding: '30px', boxSizing: 'border-box', fontFamily: 'sans-serif' }}>
           
           {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #333', paddingBottom: '20px', marginBottom: '30px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #333', paddingBottom: '15px', marginBottom: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <div style={{ width: '50px', height: '50px', backgroundColor: '#FFCC33', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <div style={{ width: '45px', height: '45px', backgroundColor: '#FFCC33', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
                   <circle cx="7" cy="17" r="2" />
                   <circle cx="17" cy="17" r="2" />
                 </svg>
               </div>
               <div>
-                <h1 style={{ fontSize: '26px', fontWeight: 'bold', textTransform: 'uppercase', margin: 0, color: '#000' }}>Car Commission</h1>
-                <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#666', letterSpacing: '2px' }}>Calculator</span>
+                <h1 style={{ fontSize: '24px', fontWeight: 'bold', textTransform: 'uppercase', margin: 0, color: '#000' }}>Car Commission</h1>
+                <span style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: '#666', letterSpacing: '2px' }}>Calculator</span>
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 5px 0', color: '#333' }}>Смета # {Date.now().toString().slice(-6)}</h2>
-              <p style={{ fontSize: '14px', margin: 0, color: '#666' }}>Дата: {new Date().toLocaleDateString()}</p>
+              <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 4px 0', color: '#333' }}>Смета # {Date.now().toString().slice(-6)}</h2>
+              <p style={{ fontSize: '13px', margin: 0, color: '#666' }}>Дата: {new Date().toLocaleDateString()}</p>
             </div>
           </div>
 
           {/* Parameters */}
-          <div style={{ marginBottom: '30px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 'bold', borderBottom: '1px solid #e5e7eb', paddingBottom: '10px', marginBottom: '15px', color: '#000' }}>Параметры лота</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: '10px', fontSize: '14px', color: '#000' }}>
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px', marginBottom: '12px', color: '#000' }}>Параметры лота</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: '8px', fontSize: '13px', color: '#000' }}>
               <div><span style={{ color: '#666', marginRight: '8px' }}>Тип кузова:</span> <b>{VEHICLE_TYPES.find(t=>t.id===vehicleType)?.label}</b></div>
               <div><span style={{ color: '#666', marginRight: '8px' }}>Год выпуска:</span> <b>{prodYear}</b></div>
               <div><span style={{ color: '#666', marginRight: '8px' }}>Тип топлива:</span> <b>{FUEL_TYPES.find(t=>t.id===fuelType)?.label}</b></div>
@@ -411,45 +417,45 @@ export default function App() {
           </div>
 
           {/* Table */}
-          <h3 style={{ fontSize: '18px', fontWeight: 'bold', borderBottom: '1px solid #e5e7eb', paddingBottom: '10px', marginBottom: '15px', color: '#000' }}>Детализация стоимости</h3>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 'bold', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px', marginBottom: '12px', color: '#000' }}>Детализация стоимости</h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f3f4f6', color: '#374151' }}>
-                <th style={{ padding: '12px', borderBottom: '1px solid #d1d5db', textAlign: 'left', fontWeight: 'bold' }}>Статья расходов</th>
-                <th style={{ padding: '12px', borderBottom: '1px solid #d1d5db', textAlign: 'right', fontWeight: 'bold' }}>Сумма ($)</th>
+                <th style={{ padding: '8px', borderBottom: '1px solid #d1d5db', textAlign: 'left', fontWeight: 'bold' }}>Статья расходов</th>
+                <th style={{ padding: '8px', borderBottom: '1px solid #d1d5db', textAlign: 'right', fontWeight: 'bold' }}>Сумма ($)</th>
               </tr>
             </thead>
-            <tbody style={{ fontSize: '14px' }}>
-              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Цена лота на аукционе</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 'bold', fontFamily: 'monospace' }}>${Math.round(auctionPrice||0).toLocaleString()}</td></tr>
-              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Аукционный сбор ({auctionType.toUpperCase()})</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(auctionFee).toLocaleString()}</td></tr>
-              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Доставка по США (до порта {exitPort.toUpperCase()})</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(landCost||0).toLocaleString()}</td></tr>
-              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Морской фрахт (до {destPort.toUpperCase()})</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(oceanCost).toLocaleString()}</td></tr>
+            <tbody style={{ fontSize: '13px' }}>
+              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Цена лота на аукционе</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 'bold', fontFamily: 'monospace' }}>${Math.round(auctionPrice||0).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Аукционный сбор ({auctionType.toUpperCase()})</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(auctionFee).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Доставка по США (до порта {exitPort.toUpperCase()})</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(landCost||0).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Морской фрахт (до {destPort.toUpperCase()})</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(oceanCost).toLocaleString()}</td></tr>
               
               {dangerousGoodsFee > 0 && (
-                <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Надбавка за опасный груз (Батарея)</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(dangerousGoodsFee).toLocaleString()}</td></tr>
+                <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Надбавка за опасный груз (Батарея)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(dangerousGoodsFee).toLocaleString()}</td></tr>
               )}
               {insurance > 0 && (
-                <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Страхование груза (1.5%)</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(insurance).toLocaleString()}</td></tr>
+                <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Страхование груза (1.5%)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(insurance).toLocaleString()}</td></tr>
               )}
               
-              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Таможенные платежи (Пошлина, Акциз, НДС)</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(customs.total).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Таможенные платежи (Пошлина, Акциз, НДС)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(customs.total).toLocaleString()}</td></tr>
               
-              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Экспедирование Клайпеда</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(fwd).toLocaleString()}</td></tr>
-              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Автовоз в Украину</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(car).toLocaleString()}</td></tr>
-              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Брокерские услуги</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(brk).toLocaleString()}</td></tr>
-              <tr><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>Комиссия дилера</td><td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(dlr).toLocaleString()}</td></tr>
+              {fwd > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Экспедирование Клайпеда</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(fwd).toLocaleString()}</td></tr>}
+              {car > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Автовоз в Украину</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(car).toLocaleString()}</td></tr>}
+              {brk > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Брокерские услуги</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(brk).toLocaleString()}</td></tr>}
+              {dlr > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Комиссия дилера</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(dlr).toLocaleString()}</td></tr>}
             </tbody>
           </table>
 
           {/* Total Block */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '30px' }}>
-            <div style={{ backgroundColor: '#FFCC33', padding: '20px 30px', borderRadius: '12px', textAlign: 'right', color: '#000' }}>
-              <div style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Итого под ключ</div>
-              <div style={{ fontSize: '36px', fontWeight: '900', fontFamily: 'monospace', lineHeight: 1 }}>${Math.round(totalCost).toLocaleString()}</div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '15px' }}>
+            <div style={{ backgroundColor: '#FFCC33', padding: '15px 25px', borderRadius: '12px', textAlign: 'right', color: '#000' }}>
+              <div style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Итого под ключ</div>
+              <div style={{ fontSize: '32px', fontWeight: '900', fontFamily: 'monospace', lineHeight: 1 }}>${Math.round(totalCost).toLocaleString()}</div>
             </div>
           </div>
           
-          <div style={{ marginTop: '50px', textAlign: 'center', fontSize: '12px', color: '#9ca3af' }}>
+          <div style={{ marginTop: '30px', textAlign: 'center', fontSize: '11px', color: '#9ca3af' }}>
             Документ сгенерирован автоматически системой Car Commission Calculator.
           </div>
         </div>
