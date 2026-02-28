@@ -238,13 +238,18 @@ export default function App() {
   const baseOcean = useMemo(() => OCEAN_FREIGHT_BASE[exitPort]?.[destPort] || 0, [exitPort, destPort]);
   const oceanCost = useMemo(() => baseOcean + vehicleExtra, [baseOcean, vehicleExtra]);
   
+  // Строго зафиксировано 175$ за опасный груз для электро и гибридов
+  const dangerousGoodsFee = useMemo(() => {
+    return (fuelType === 'electric' || fuelType === 'hybrid') ? 175 : 0;
+  }, [fuelType]);
+  
   const insurance = useMemo(() => insuranceEnabled ? (parseFloat(auctionPrice) || 0) * 0.015 : 0, [auctionPrice, insuranceEnabled]);
   const customs = useMemo(() => calculateUkraineCustoms(auctionPrice, prodYear, engineVolume, fuelType), [auctionPrice, prodYear, engineVolume, fuelType]);
   
   const totalCost = useMemo(() => {
     const p = parseFloat(auctionPrice) || 0;
-    return p + auctionFee + (landCost || 0) + oceanCost + customs.total + brokerFee + exportDocsFee + insurance;
-  }, [auctionPrice, auctionFee, landCost, oceanCost, customs, insurance]);
+    return p + auctionFee + (landCost || 0) + oceanCost + dangerousGoodsFee + customs.total + brokerFee + exportDocsFee + insurance;
+  }, [auctionPrice, auctionFee, landCost, oceanCost, dangerousGoodsFee, customs, brokerFee, exportDocsFee, insurance]);
 
   useEffect(() => {
     const saved = localStorage.getItem('w8_pro_history');
@@ -363,7 +368,7 @@ export default function App() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <InputWrapper label="Год" icon={Calendar}>
                 <select value={prodYear} onChange={(e) => setProdYear(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33] transition-colors">
-                  {Array.from({ length: 30 }, (_, i) => 2024 - i).map(y => <option key={y} value={y}>{y}</option>)}
+                  {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </InputWrapper>
 
@@ -466,6 +471,9 @@ export default function App() {
                 <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Логистика (Logistics)</div>
                 <PriceItem label="Доставка (USA Land)" value={landCost} highlight={landCost === null} />
                 <PriceItem label="Фрахт (Ocean)" value={oceanCost} subtext={`Порт: ${destPort.toUpperCase()}`} />
+                {dangerousGoodsFee > 0 && (
+                  <PriceItem label="Опасный груз" value={dangerousGoodsFee} subtext="Батарея (Электро/Гибрид)" />
+                )}
                 <PriceItem label="Страховка" value={insurance} />
               </div>
 
