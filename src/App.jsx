@@ -1,3 +1,6 @@
+// Раскомментируйте эту строку в вашем локальном проекте:
+import { SHIPPING_DATA } from './assets/shipping_data';
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   MapPin, Calculator, DollarSign, Save, Trash2, History, Anchor, 
@@ -5,7 +8,8 @@ import {
   Zap, Fuel, Calendar, Globe, Download, FileText, User, Search, ChevronDown
 } from 'lucide-react';
 
-import { SHIPPING_DATA } from './assets/shipping_data';
+// --- MOCK ДЛЯ SHIPPING DATA (Удалите, если используете свой импорт выше) ---
+
 
 // --- ТАРИФЫ МОРСКОГО ФРАХТА ---
 const OCEAN_FREIGHT_BASE = {
@@ -55,20 +59,115 @@ const calculateAuctionFee = (price, auction) => {
   const p = parseFloat(price) || 0;
   if (p <= 0) return 0;
   
+  // Manheim имеет свою простую формулу (для примера)
   if (auction === 'manheim') return Math.max(350, p * 0.05);
   
-  if (p < 500) return 185;
-  if (p < 1000) return 265;
-  if (p < 1500) return 340;
-  if (p < 2000) return 405;
-  if (p < 2500) return 460;
-  if (p < 3000) return 510;
-  if (p < 3500) return 560;
-  if (p < 4000) return 610;
-  if (p < 4500) return 660;
-  if (p < 5000) return 710;
-  
-  return 750 + (p * 0.045);
+  let buyerFee = 0;
+  let internetFee = 0;
+  // Стандартные фиксированные сборы (Gate Fee, Service Fee, Environmental Fee)
+  // В среднем для Copart и IAA составляют около $104 ($89 Gate + $15 Env)
+  const fixedFees = 104;
+
+  if (auction === 'copart') {
+    // --- COPART: Standard Secure Buyer Fee ---
+    if (p < 50) buyerFee = 25;
+    else if (p < 100) buyerFee = 45;
+    else if (p < 200) buyerFee = 80;
+    else if (p < 300) buyerFee = 130;
+    else if (p < 350) buyerFee = 135;
+    else if (p < 400) buyerFee = 150;
+    else if (p < 500) buyerFee = 185;
+    else if (p < 600) buyerFee = 215;
+    else if (p < 700) buyerFee = 250;
+    else if (p < 800) buyerFee = 275;
+    else if (p < 900) buyerFee = 300;
+    else if (p < 1000) buyerFee = 325;
+    else if (p < 1200) buyerFee = 365;
+    else if (p < 1300) buyerFee = 395;
+    else if (p < 1400) buyerFee = 410;
+    else if (p < 1500) buyerFee = 425;
+    else if (p < 1600) buyerFee = 440;
+    else if (p < 1700) buyerFee = 465;
+    else if (p < 1800) buyerFee = 485;
+    else if (p < 2000) buyerFee = 505;
+    else if (p < 2400) buyerFee = 535;
+    else if (p < 2500) buyerFee = 550;
+    else if (p < 3000) buyerFee = 570;
+    else if (p < 3500) buyerFee = 645;
+    else if (p < 4000) buyerFee = 675;
+    else if (p < 4500) buyerFee = 710;
+    else if (p < 5000) buyerFee = 730;
+    else if (p < 6000) buyerFee = 765;
+    else if (p < 7500) buyerFee = 800;
+    else if (p < 8000) buyerFee = 825;
+    else if (p < 8500) buyerFee = 845;
+    else if (p < 10000) buyerFee = 865;
+    else if (p < 15000) buyerFee = 900;
+    else buyerFee = p * 0.06; // 6%
+
+    // --- COPART: Virtual Bid Fee ---
+    if (p < 100) internetFee = 0;
+    else if (p < 500) internetFee = 49;
+    else if (p < 1000) internetFee = 59;
+    else if (p < 1500) internetFee = 79;
+    else if (p < 2000) internetFee = 89;
+    else if (p < 3000) internetFee = 109;
+    else if (p < 4000) internetFee = 129;
+    else internetFee = 149;
+
+  } else if (auction === 'iaai') {
+    // --- IAAI: Standard Volume Buyer Fee ---
+    if (p < 50) buyerFee = 25;
+    else if (p < 100) buyerFee = 45;
+    else if (p < 200) buyerFee = 80;
+    else if (p < 300) buyerFee = 130;
+    else if (p < 350) buyerFee = 137.5;
+    else if (p < 400) buyerFee = 150;
+    else if (p < 500) buyerFee = 185;
+    else if (p < 600) buyerFee = 210;
+    else if (p < 700) buyerFee = 240;
+    else if (p < 800) buyerFee = 260;
+    else if (p < 900) buyerFee = 285;
+    else if (p < 1000) buyerFee = 310;
+    else if (p < 1200) buyerFee = 355;
+    else if (p < 1300) buyerFee = 380;
+    else if (p < 1400) buyerFee = 395;
+    else if (p < 1500) buyerFee = 410;
+    else if (p < 1600) buyerFee = 430;
+    else if (p < 1700) buyerFee = 450;
+    else if (p < 1800) buyerFee = 460;
+    else if (p < 2000) buyerFee = 480;
+    else if (p < 2400) buyerFee = 515;
+    else if (p < 2500) buyerFee = 530;
+    else if (p < 3000) buyerFee = 555;
+    else if (p < 3500) buyerFee = 610;
+    else if (p < 4000) buyerFee = 645;
+    else if (p < 4500) buyerFee = 670;
+    else if (p < 5000) buyerFee = 695;
+    else if (p < 6000) buyerFee = 725;
+    else if (p < 7500) buyerFee = 760;
+    else if (p < 8000) buyerFee = 785;
+    else if (p < 8500) buyerFee = 800;
+    else if (p < 9500) buyerFee = 810;
+    else if (p < 10000) buyerFee = 820;
+    else if (p < 11500) buyerFee = 850;
+    else if (p < 12000) buyerFee = 860;
+    else if (p < 12500) buyerFee = 875;
+    else if (p < 15000) buyerFee = 890;
+    else buyerFee = p * 0.06; // 6%
+
+    // --- IAAI: Live Online Bid Fee ---
+    if (p < 100) internetFee = 0;
+    else if (p < 500) internetFee = 50;
+    else if (p < 1000) internetFee = 65;
+    else if (p < 1500) internetFee = 85;
+    else if (p < 2000) internetFee = 95;
+    else if (p < 3000) internetFee = 110;
+    else if (p < 4000) internetFee = 125;
+    else internetFee = 160;
+  }
+
+  return buyerFee + internetFee + fixedFees;
 };
 
 const calculateUkraineCustoms = (price, year, volumeCm3, fuelType) => {
@@ -232,7 +331,6 @@ export default function App() {
     return [...cities].sort((a, b) => a.city.localeCompare(b.city));
   }, [auctionType]);
 
-  // Добавлена защита (optional chaining) от пустых данных
   const auctionFee = useMemo(() => calculateAuctionFee(auctionPrice, auctionType), [auctionPrice, auctionType]);
   const currentCityObj = useMemo(() => SHIPPING_DATA[auctionType]?.find(c => c.city === selectedCity), [selectedCity, auctionType]);
   const landCost = useMemo(() => (currentCityObj ? currentCityObj.rates[exitPort] : null), [currentCityObj, exitPort]);
