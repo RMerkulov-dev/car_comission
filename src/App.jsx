@@ -106,7 +106,8 @@ const DEST_PORTS = [
 const FUEL_TYPES = [
   { id: 'petrol', label: 'Бензин' },
   { id: 'diesel', label: 'Дизель' },
-  { id: 'electric', label: 'Электро' }
+  { id: 'electric', label: 'Электро' },
+  { id: 'hybrid', label: 'Гибрид' }
 ];
 
 const AUCTIONS = [
@@ -140,26 +141,44 @@ const calculateAuctionFee = (price, auction) => {
 const calculateUkraineCustoms = (price, year, volumeCm3, fuelType) => {
   const p = parseFloat(price) || 0;
   const vol = parseFloat(volumeCm3) || 0;
+  
+  // Кросс-курс НБУ EUR/USD (примерный). Акциз считается в евро.
+  const EUR_TO_USD = 1.08; 
+  
   const currentYear = new Date().getFullYear();
-  const vehicleAge = Math.max(1, Math.min(15, currentYear - parseInt(year || currentYear) - 1));
+  // Возраст: Текущий год минус год выпуска минус 1 (но от 1 до 15 лет)
+  let vehicleAge = currentYear - parseInt(year || currentYear) - 1;
+  vehicleAge = Math.max(1, Math.min(15, vehicleAge)); 
 
   if (p === 0) return { duty: 0, excise: 0, vat: 0, pension: 0, total: 0 };
 
+  // Пенсионный фонд рассчитывается от стоимости авто
+  // Пороги на 2024 год: до ~12800$ (3%), до ~22500$ (4%), свыше (5%)
+  let pensionRate = 0.03;
+  if (p > 12800) pensionRate = 0.04;
+  if (p > 22500) pensionRate = 0.05;
+  const pension = p * pensionRate;
+
   if (fuelType === 'electric') {
-    const batteryCapacity = vol > 100 ? vol : 60; 
-    const electricExcise = batteryCapacity * 1.1; 
-    return { duty: 0, excise: electricExcise, vat: 0, pension: p * 0.03, total: electricExcise + (p * 0.03) };
+    // Если введено < 200, предполагаем, что это емкость в кВт*ч, иначе берем 60
+    const batteryCapacity = vol < 200 && vol > 0 ? vol : 60; 
+    const excise = batteryCapacity * 1 * EUR_TO_USD; 
+    return { duty: 0, excise, vat: 0, pension, total: excise + pension };
   }
 
   const duty = p * 0.10;
-  let baseRate = (fuelType === 'petrol') ? (vol <= 3000 ? 50 : 100) : (vol <= 3500 ? 75 : 150);
-  const excise = baseRate * (vol / 1000) * vehicleAge * 1.1; 
-  const vat = (p + duty + excise) * 0.20;
+  let excise = 0;
 
-  let pensionRate = 0.03;
-  if (p > 20000) pensionRate = 0.04;
-  if (p > 40000) pensionRate = 0.05;
-  const pension = p * pensionRate;
+  if (fuelType === 'hybrid') {
+    // Гибриды (HEV) имеют фиксированный акциз: 100 евро за 1 шт.
+    excise = 100 * EUR_TO_USD;
+  } else {
+    // Бензин и Дизель
+    let baseRate = (fuelType === 'petrol') ? (vol <= 3000 ? 50 : 100) : (vol <= 3500 ? 75 : 150);
+    excise = baseRate * (vol / 1000) * vehicleAge * EUR_TO_USD;
+  }
+
+  const vat = (p + duty + excise) * 0.20;
 
   return { duty, excise, vat, pension, total: duty + excise + vat + pension };
 };
@@ -235,14 +254,54 @@ export default function App() {
     document.title = "Car Commission Calculator";
     const link = document.querySelector("link[rel~='icon']");
     if (link) {
-      link.href = "data:image/svg+xml,<svg xmlns=%22[http://www.w3.org/2000/svg%22](http://www.w3.org/2000/svg%22) viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>";
+      link.href = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>";
     } else {
        const newLink = document.createElement('link');
        newLink.rel = 'icon';
-       newLink.href = "data:image/svg+xml,<svg xmlns=%22[http://www.w3.org/2000/svg%22](http://www.w3.org/2000/svg%22) viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>";
+       newLink.href = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>";
        document.head.appendChild(newLink);
     }
   }, []);
+
+  // --- ЛОГИКА АВТОВЫБОРА САМОГО ДЕШЕВОГО ПОРТА ---
+  const autoSelectCheapestPort = (city, destination, currentAuction) => {
+    if (!city) return;
+    const cityObj = SHIPPING_DATA[currentAuction]?.find(c => c.city === city);
+    
+    if (cityObj) {
+      let minCost = Infinity;
+      let bestPort = 'nj'; // Фолбэк по умолчанию
+      
+      Object.keys(OCEAN_FREIGHT_BASE).forEach(port => {
+        const lCost = cityObj.rates[port];
+        if (lCost !== null && lCost !== undefined) {
+          const oCost = OCEAN_FREIGHT_BASE[port]?.[destination] || 0;
+          const totalDeliveryCost = lCost + oCost;
+          
+          if (totalDeliveryCost < minCost) {
+            minCost = totalDeliveryCost;
+            bestPort = port;
+          }
+        }
+      });
+      
+      if (minCost !== Infinity) {
+        setExitPort(bestPort);
+      }
+    }
+  };
+
+  const handleCityChange = (e) => {
+    const newCity = e.target.value;
+    setSelectedCity(newCity);
+    autoSelectCheapestPort(newCity, destPort, auctionType);
+  };
+
+  const handleDestPortChange = (e) => {
+    const newDest = e.target.value;
+    setDestPort(newDest);
+    autoSelectCheapestPort(selectedCity, newDest, auctionType);
+  };
 
   const saveToHistory = () => {
     const entry = {
@@ -308,7 +367,7 @@ export default function App() {
                 </select>
               </InputWrapper>
 
-              <InputWrapper label="Объем (см3)" icon={Zap}>
+              <InputWrapper label="Объем (см3) / Емкость (кВт)" icon={Zap}>
                 <input type="number" value={engineVolume} onChange={(e) => setEngineVolume(e.target.value)} placeholder="2000" className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none focus:border-[#FFCC33] cursor-pointer" />
               </InputWrapper>
             </div>
@@ -317,7 +376,7 @@ export default function App() {
               <InputWrapper label="Тип топлива" icon={Fuel}>
                 <div className="flex gap-2 bg-[#1F1F1F] p-1 rounded-xl border border-gray-800">
                   {FUEL_TYPES.map(f => (
-                    <button key={f.id} onClick={() => setFuelType(f.id)} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${fuelType === f.id ? 'bg-[#333] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+                    <button key={f.id} onClick={() => setFuelType(f.id)} className={`flex-1 py-2 text-[10px] sm:text-xs font-bold rounded-lg transition-all cursor-pointer ${fuelType === f.id ? 'bg-[#333] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
                       {f.label}
                     </button>
                   ))}
@@ -349,7 +408,7 @@ export default function App() {
               </InputWrapper>
 
               <InputWrapper label="Площадка (USA)" icon={MapPin}>
-                <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
+                <select value={selectedCity} onChange={handleCityChange} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
                   <option value="">Выберите город</option>
                   {SHIPPING_DATA[auctionType].map(l => <option key={l.city} value={l.city}>{l.city}</option>)}
                 </select>
@@ -364,7 +423,7 @@ export default function App() {
               </InputWrapper>
 
               <InputWrapper label="Порт назначения" icon={Anchor}>
-                <select value={destPort} onChange={(e) => setDestPort(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
+                <select value={destPort} onChange={handleDestPortChange} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
                   {DEST_PORTS.map(d => <option key={d.id} value={d.id} disabled={d.disabled}>{d.label}</option>)}
                 </select>
               </InputWrapper>
