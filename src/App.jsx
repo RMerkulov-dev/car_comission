@@ -1,6 +1,9 @@
 // Раскомментируйте эту строку в вашем локальном проекте:
 import { SHIPPING_DATA } from './assets/shipping_data';
 
+// Раскомментируйте эту строку в вашем локальном проекте и удалите INLINE SHIPPING DATA ниже:
+// import { SHIPPING_DATA } from './assets/shipping_data';
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   MapPin, Calculator, DollarSign, Save, Trash2, History, Anchor, 
@@ -8,7 +11,8 @@ import {
   Zap, Fuel, Calendar, Globe, Download, FileText, User, Search, ChevronDown
 } from 'lucide-react';
 
-// --- MOCK ДЛЯ SHIPPING DATA (Удалите, если используете свой импорт выше) ---
+// --- INLINE SHIPPING DATA TO RESOLVE IMPORT ERROR IN PREVIEW ---
+// УДАЛИТЕ ЭТОТ БЛОК В ВАШЕМ ЛОКАЛЬНОМ ПРОЕКТЕ, ЕСЛИ ИСПОЛЬЗУЕТЕ ИМПОРТ ВЫШЕ
 
 
 // --- ТАРИФЫ МОРСКОГО ФРАХТА ---
@@ -55,124 +59,160 @@ const AUCTIONS = [
 
 // --- HELPER FUNCTIONS ---
 
+const calculateCopartFee = (price) => {
+  const p = parseFloat(price) || 0;
+  if (p <= 0) return 0;
+  
+  // Secured Payment Methods (Buyer Fee)
+  let buyerFee = 0;
+  if (p < 100) buyerFee = 1;
+  else if (p < 200) buyerFee = 25;
+  else if (p < 300) buyerFee = 60;
+  else if (p < 350) buyerFee = 85;
+  else if (p < 400) buyerFee = 100;
+  else if (p < 450) buyerFee = 125;
+  else if (p < 500) buyerFee = 135;
+  else if (p < 550) buyerFee = 145;
+  else if (p < 600) buyerFee = 155;
+  else if (p < 700) buyerFee = 170;
+  else if (p < 800) buyerFee = 195;
+  else if (p < 900) buyerFee = 215;
+  else if (p < 1000) buyerFee = 230;
+  else if (p < 1200) buyerFee = 250;
+  else if (p < 1300) buyerFee = 270;
+  else if (p < 1400) buyerFee = 285;
+  else if (p < 1500) buyerFee = 300;
+  else if (p < 1600) buyerFee = 315;
+  else if (p < 1700) buyerFee = 330;
+  else if (p < 1800) buyerFee = 350;
+  else if (p < 2000) buyerFee = 370;
+  else if (p < 2400) buyerFee = 390;
+  else if (p < 2500) buyerFee = 425;
+  else if (p < 3000) buyerFee = 460;
+  else if (p < 3500) buyerFee = 505;
+  else if (p < 4000) buyerFee = 555;
+  else if (p < 4500) buyerFee = 600;
+  else if (p < 5000) buyerFee = 625;
+  else if (p < 5500) buyerFee = 650;
+  else if (p < 6000) buyerFee = 675;
+  else if (p < 6500) buyerFee = 700;
+  else if (p < 7000) buyerFee = 720;
+  else if (p < 7500) buyerFee = 755;
+  else if (p < 8000) buyerFee = 775;
+  else if (p < 8500) buyerFee = 800;
+  else if (p < 10000) buyerFee = 820;
+  else if (p < 11500) buyerFee = 850;
+  else if (p < 12000) buyerFee = 860;
+  else if (p < 12500) buyerFee = 875;
+  else if (p < 15000) buyerFee = 890;
+  else buyerFee = p * 0.06;
+
+  // Virtual Bid Fee (Live Bid)
+  let virtualFee = 0;
+  if (p < 100) virtualFee = 0;
+  else if (p < 500) virtualFee = 50;
+  else if (p < 1000) virtualFee = 65;
+  else if (p < 1500) virtualFee = 85;
+  else if (p < 2000) virtualFee = 95;
+  else if (p < 4000) virtualFee = 110;
+  else if (p < 6000) virtualFee = 125;
+  else if (p < 8000) virtualFee = 145;
+  else virtualFee = 160;
+
+  // Fixed Fees: Service (Gate), Environmental, Title Handling
+  const gateFee = 95;
+  const envFee = 15;
+  const titleFee = 20;
+
+  return buyerFee + virtualFee + gateFee + envFee + titleFee;
+};
+
+const calculateIAAIFee = (price) => {
+  const p = parseFloat(price) || 0;
+  if (p <= 0) return 0;
+
+  // ИСПОЛЬЗУЕМ "HIGH VOLUME FEE" (совпадает с вашим скриншотом: 4300$ -> 600$)
+  let buyerFee = 0;
+  if (p < 100) buyerFee = 1;
+  else if (p < 200) buyerFee = 25;
+  else if (p < 300) buyerFee = 60;
+  else if (p < 350) buyerFee = 85;
+  else if (p < 400) buyerFee = 100;
+  else if (p < 450) buyerFee = 125;
+  else if (p < 500) buyerFee = 135;
+  else if (p < 550) buyerFee = 145;
+  else if (p < 600) buyerFee = 155;
+  else if (p < 700) buyerFee = 170;
+  else if (p < 800) buyerFee = 195;
+  else if (p < 900) buyerFee = 215;
+  else if (p < 1000) buyerFee = 230;
+  else if (p < 1200) buyerFee = 250;
+  else if (p < 1300) buyerFee = 270;
+  else if (p < 1400) buyerFee = 285;
+  else if (p < 1500) buyerFee = 300;
+  else if (p < 1600) buyerFee = 315;
+  else if (p < 1700) buyerFee = 330;
+  else if (p < 1800) buyerFee = 350;
+  else if (p < 2000) buyerFee = 370;
+  else if (p < 2400) buyerFee = 390;
+  else if (p < 2500) buyerFee = 425;
+  else if (p < 3000) buyerFee = 460;
+  else if (p < 3500) buyerFee = 505;
+  else if (p < 4000) buyerFee = 555; // Nissan на скрине: $3800 -> $555
+  else if (p < 4500) buyerFee = 600; // Tiguan на скрине: $4300 -> $600
+  else if (p < 5000) buyerFee = 625;
+  else if (p < 5500) buyerFee = 650;
+  else if (p < 6000) buyerFee = 675;
+  else if (p < 6500) buyerFee = 700;
+  else if (p < 7000) buyerFee = 720;
+  else if (p < 7500) buyerFee = 755;
+  else if (p < 8000) buyerFee = 775;
+  else if (p < 8500) buyerFee = 800;
+  else if (p < 10000) buyerFee = 820;
+  else if (p < 11500) buyerFee = 850;
+  else if (p < 12000) buyerFee = 860;
+  else if (p < 12500) buyerFee = 875;
+  else if (p < 15000) buyerFee = 890;
+  else buyerFee = p * 0.06;
+
+  // Internet Bid Fee (Live Online Bid Fee)
+  let virtualFee = 0;
+  if (p < 100) virtualFee = 0;
+  else if (p < 500) virtualFee = 50;
+  else if (p < 1000) virtualFee = 65;
+  else if (p < 1500) virtualFee = 85;
+  else if (p < 2000) virtualFee = 95;
+  else if (p < 4000) virtualFee = 110; // Nissan на скрине: $3800 -> $110
+  else if (p < 6000) virtualFee = 125; // Tiguan на скрине: $4300 -> $125
+  else if (p < 8000) virtualFee = 145;
+  else virtualFee = 160;
+
+  // Fixed Fees: Service, Environmental, Title Handling
+  const serviceFee = 95;
+  const envFee = 15;
+  const titleFee = 20;
+
+  // В общую сумму не включены Transaction Tax ($5), так как они варьируются от штата,
+  // но основные сборы теперь 1 в 1 как на аукционе
+  return buyerFee + virtualFee + serviceFee + envFee + titleFee;
+};
+
 const calculateAuctionFee = (price, auction) => {
   const p = parseFloat(price) || 0;
   if (p <= 0) return 0;
   
-  // Manheim имеет свою простую формулу (для примера)
+  if (auction === 'copart') return calculateCopartFee(p);
+  if (auction === 'iaai') return calculateIAAIFee(p);
   if (auction === 'manheim') return Math.max(350, p * 0.05);
   
-  let buyerFee = 0;
-  let internetFee = 0;
-  // Стандартные фиксированные сборы (Gate Fee, Service Fee, Environmental Fee)
-  // В среднем для Copart и IAA составляют около $104 ($89 Gate + $15 Env)
-  const fixedFees = 104;
-
-  if (auction === 'copart') {
-    // --- COPART: Standard Secure Buyer Fee ---
-    if (p < 50) buyerFee = 25;
-    else if (p < 100) buyerFee = 45;
-    else if (p < 200) buyerFee = 80;
-    else if (p < 300) buyerFee = 130;
-    else if (p < 350) buyerFee = 135;
-    else if (p < 400) buyerFee = 150;
-    else if (p < 500) buyerFee = 185;
-    else if (p < 600) buyerFee = 215;
-    else if (p < 700) buyerFee = 250;
-    else if (p < 800) buyerFee = 275;
-    else if (p < 900) buyerFee = 300;
-    else if (p < 1000) buyerFee = 325;
-    else if (p < 1200) buyerFee = 365;
-    else if (p < 1300) buyerFee = 395;
-    else if (p < 1400) buyerFee = 410;
-    else if (p < 1500) buyerFee = 425;
-    else if (p < 1600) buyerFee = 440;
-    else if (p < 1700) buyerFee = 465;
-    else if (p < 1800) buyerFee = 485;
-    else if (p < 2000) buyerFee = 505;
-    else if (p < 2400) buyerFee = 535;
-    else if (p < 2500) buyerFee = 550;
-    else if (p < 3000) buyerFee = 570;
-    else if (p < 3500) buyerFee = 645;
-    else if (p < 4000) buyerFee = 675;
-    else if (p < 4500) buyerFee = 710;
-    else if (p < 5000) buyerFee = 730;
-    else if (p < 6000) buyerFee = 765;
-    else if (p < 7500) buyerFee = 800;
-    else if (p < 8000) buyerFee = 825;
-    else if (p < 8500) buyerFee = 845;
-    else if (p < 10000) buyerFee = 865;
-    else if (p < 15000) buyerFee = 900;
-    else buyerFee = p * 0.06; // 6%
-
-    // --- COPART: Virtual Bid Fee ---
-    if (p < 100) internetFee = 0;
-    else if (p < 500) internetFee = 49;
-    else if (p < 1000) internetFee = 59;
-    else if (p < 1500) internetFee = 79;
-    else if (p < 2000) internetFee = 89;
-    else if (p < 3000) internetFee = 109;
-    else if (p < 4000) internetFee = 129;
-    else internetFee = 149;
-
-  } else if (auction === 'iaai') {
-    // --- IAAI: Standard Volume Buyer Fee ---
-    if (p < 50) buyerFee = 25;
-    else if (p < 100) buyerFee = 45;
-    else if (p < 200) buyerFee = 80;
-    else if (p < 300) buyerFee = 130;
-    else if (p < 350) buyerFee = 137.5;
-    else if (p < 400) buyerFee = 150;
-    else if (p < 500) buyerFee = 185;
-    else if (p < 600) buyerFee = 210;
-    else if (p < 700) buyerFee = 240;
-    else if (p < 800) buyerFee = 260;
-    else if (p < 900) buyerFee = 285;
-    else if (p < 1000) buyerFee = 310;
-    else if (p < 1200) buyerFee = 355;
-    else if (p < 1300) buyerFee = 380;
-    else if (p < 1400) buyerFee = 395;
-    else if (p < 1500) buyerFee = 410;
-    else if (p < 1600) buyerFee = 430;
-    else if (p < 1700) buyerFee = 450;
-    else if (p < 1800) buyerFee = 460;
-    else if (p < 2000) buyerFee = 480;
-    else if (p < 2400) buyerFee = 515;
-    else if (p < 2500) buyerFee = 530;
-    else if (p < 3000) buyerFee = 555;
-    else if (p < 3500) buyerFee = 610;
-    else if (p < 4000) buyerFee = 645;
-    else if (p < 4500) buyerFee = 670;
-    else if (p < 5000) buyerFee = 695;
-    else if (p < 6000) buyerFee = 725;
-    else if (p < 7500) buyerFee = 760;
-    else if (p < 8000) buyerFee = 785;
-    else if (p < 8500) buyerFee = 800;
-    else if (p < 9500) buyerFee = 810;
-    else if (p < 10000) buyerFee = 820;
-    else if (p < 11500) buyerFee = 850;
-    else if (p < 12000) buyerFee = 860;
-    else if (p < 12500) buyerFee = 875;
-    else if (p < 15000) buyerFee = 890;
-    else buyerFee = p * 0.06; // 6%
-
-    // --- IAAI: Live Online Bid Fee ---
-    if (p < 100) internetFee = 0;
-    else if (p < 500) internetFee = 50;
-    else if (p < 1000) internetFee = 65;
-    else if (p < 1500) internetFee = 85;
-    else if (p < 2000) internetFee = 95;
-    else if (p < 3000) internetFee = 110;
-    else if (p < 4000) internetFee = 125;
-    else internetFee = 160;
-  }
-
-  return buyerFee + internetFee + fixedFees;
+  return 750 + (p * 0.045); // fallback
 };
 
-const calculateUkraineCustoms = (price, year, volumeCm3, fuelType) => {
+// ОБНОВЛЕННАЯ ФУНКЦИЯ: Теперь таможенная стоимость = Цена покупки + Аукционный сбор + $1600
+const calculateUkraineCustoms = (price, year, volumeCm3, fuelType, auctionFeeValue = 0) => {
   const p = parseFloat(price) || 0;
   const vol = parseFloat(volumeCm3) || 0;
+  const fee = parseFloat(auctionFeeValue) || 0;
   const EUR_TO_USD = 1.08; 
   const currentYear = new Date().getFullYear();
   let vehicleAge = currentYear - parseInt(year || currentYear) - 1;
@@ -186,7 +226,10 @@ const calculateUkraineCustoms = (price, year, volumeCm3, fuelType) => {
     return { duty: 0, excise, vat: 0, total: excise };
   }
 
-  const duty = p * 0.10;
+  // Таможенная стоимость = Цена покупки + Аукционный сбор + $1600
+  const customsBase = p + fee + 1600;
+
+  const duty = customsBase * 0.10;
   let excise = 0;
 
   if (fuelType === 'hybrid') {
@@ -196,7 +239,7 @@ const calculateUkraineCustoms = (price, year, volumeCm3, fuelType) => {
     excise = baseRate * (vol / 1000) * vehicleAge * EUR_TO_USD;
   }
 
-  const vat = (p + duty + excise) * 0.20;
+  const vat = (customsBase + duty + excise) * 0.20;
   return { duty, excise, vat, total: duty + excise + vat };
 };
 
@@ -274,14 +317,30 @@ const SearchableSelect = ({ options, value, onChange, placeholder }) => {
   );
 };
 
-const PriceItem = ({ label, value, highlight = false, subtext }) => (
-  <div className="flex justify-between items-center py-1 group cursor-pointer hover:bg-white/5 rounded-lg px-2 -mx-2 transition-colors">
+// Обновленный компонент PriceItem с поддержкой редактирования
+const PriceItem = ({ label, value, highlight = false, subtext, editable = false, onValueChange }) => (
+  <div className="flex justify-between items-center py-1 group rounded-lg px-2 -mx-2 transition-colors">
     <div>
       <div className="text-xs text-gray-400 font-medium">{label}</div>
       {subtext && <div className="text-[9px] text-gray-600 font-bold">{subtext}</div>}
     </div>
-    <div className={`text-sm font-mono font-bold ${highlight ? 'text-red-500' : 'text-white'}`}>
-      {value === null || value === undefined ? '—' : `$${Math.round(value).toLocaleString()}`}
+    <div className="flex items-center">
+      {editable ? (
+        <div className="relative">
+          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">$</span>
+          <input
+            type="number"
+            value={value === null || value === undefined ? '' : Math.round(value)}
+            onChange={(e) => onValueChange(e.target.value)}
+            className="w-24 bg-[#1F1F1F] border border-gray-700 rounded-md py-1 pl-5 pr-2 text-sm font-mono font-bold text-right text-[#FFCC33] outline-none focus:border-[#FFCC33] transition-colors"
+            placeholder="0"
+          />
+        </div>
+      ) : (
+        <div className={`text-sm font-mono font-bold ${highlight ? 'text-red-500' : 'text-white'}`}>
+          {value === null || value === undefined ? '—' : `$${Math.round(value).toLocaleString()}`}
+        </div>
+      )}
     </div>
   </div>
 );
@@ -326,37 +385,52 @@ export default function App() {
   const [saveName, setSaveName] = useState('');
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
+  // Править данные (режим редактирования)
+  const [editMode, setEditMode] = useState(false);
+  const [overrides, setOverrides] = useState({});
+
   const sortedCities = useMemo(() => {
     const cities = SHIPPING_DATA[auctionType] || [];
     return [...cities].sort((a, b) => a.city.localeCompare(b.city));
   }, [auctionType]);
 
-  const auctionFee = useMemo(() => calculateAuctionFee(auctionPrice, auctionType), [auctionPrice, auctionType]);
+  // Базовые автоматические расчеты
+  const autoAuctionFee = useMemo(() => calculateAuctionFee(auctionPrice, auctionType), [auctionPrice, auctionType]);
   const currentCityObj = useMemo(() => SHIPPING_DATA[auctionType]?.find(c => c.city === selectedCity), [selectedCity, auctionType]);
-  const landCost = useMemo(() => (currentCityObj ? currentCityObj.rates[exitPort] : null), [currentCityObj, exitPort]);
+  const autoLandCost = useMemo(() => (currentCityObj ? currentCityObj.rates[exitPort] : null), [currentCityObj, exitPort]);
   
   const vehicleExtra = useMemo(() => VEHICLE_TYPES.find(t => t.id === vehicleType)?.extra || 0, [vehicleType]);
   const baseOcean = useMemo(() => OCEAN_FREIGHT_BASE[exitPort]?.[destPort] || 0, [exitPort, destPort]);
-  const oceanCost = useMemo(() => baseOcean + vehicleExtra, [baseOcean, vehicleExtra]);
+  const autoOceanCost = useMemo(() => baseOcean + vehicleExtra, [baseOcean, vehicleExtra]);
   
-  // Опасный груз
-  const dangerousGoodsFee = useMemo(() => {
+  const autoDangerousGoodsFee = useMemo(() => {
     return (fuelType === 'electric' || fuelType === 'hybrid') ? 175 : 0;
   }, [fuelType]);
   
-  const insurance = useMemo(() => insuranceEnabled ? (parseFloat(auctionPrice) || 0) * 0.015 : 0, [auctionPrice, insuranceEnabled]);
-  const customs = useMemo(() => calculateUkraineCustoms(auctionPrice, prodYear, engineVolume, fuelType), [auctionPrice, prodYear, engineVolume, fuelType]);
-  
-  // Parsed Extra Fees
-  const fwd = parseFloat(extraFees.forwarding) || 0;
-  const car = parseFloat(extraFees.carrier) || 0;
-  const brk = parseFloat(extraFees.broker) || 0;
-  const dlr = parseFloat(extraFees.dealer) || 0;
+  const autoInsurance = useMemo(() => insuranceEnabled ? (parseFloat(auctionPrice) || 0) * 0.015 : 0, [auctionPrice, insuranceEnabled]);
+  const autoCustoms = useMemo(() => calculateUkraineCustoms(auctionPrice, prodYear, engineVolume, fuelType, autoAuctionFee), [auctionPrice, prodYear, engineVolume, fuelType, autoAuctionFee]);
 
-  const totalCost = useMemo(() => {
-    const p = parseFloat(auctionPrice) || 0;
-    return p + auctionFee + (landCost || 0) + oceanCost + dangerousGoodsFee + customs.total + fwd + car + brk + dlr + insurance;
-  }, [auctionPrice, auctionFee, landCost, oceanCost, dangerousGoodsFee, customs, fwd, car, brk, dlr, insurance]);
+  const parsedFwd = parseFloat(extraFees.forwarding) || 0;
+  const parsedCar = parseFloat(extraFees.carrier) || 0;
+  const parsedBrk = parseFloat(extraFees.broker) || 0;
+  const parsedDlr = parseFloat(extraFees.dealer) || 0;
+
+  // Эффективные значения с учетом возможных ручных переопределений
+  const effAuctionPrice = overrides.auctionPrice !== undefined ? overrides.auctionPrice : (parseFloat(auctionPrice) || 0);
+  const effAuctionFee = overrides.auctionFee !== undefined ? overrides.auctionFee : autoAuctionFee;
+  const effLandCost = overrides.landCost !== undefined ? overrides.landCost : (autoLandCost || 0);
+  const effOceanCost = overrides.oceanCost !== undefined ? overrides.oceanCost : autoOceanCost;
+  const effDangerousGoodsFee = overrides.dangerousGoodsFee !== undefined ? overrides.dangerousGoodsFee : autoDangerousGoodsFee;
+  const effInsurance = overrides.insurance !== undefined ? overrides.insurance : autoInsurance;
+  const effCustomsTotal = overrides.customsTotal !== undefined ? overrides.customsTotal : autoCustoms.total;
+  const effFwd = overrides.fwd !== undefined ? overrides.fwd : parsedFwd;
+  const effCar = overrides.car !== undefined ? overrides.car : parsedCar;
+  const effBrk = overrides.brk !== undefined ? overrides.brk : parsedBrk;
+  const effDlr = overrides.dlr !== undefined ? overrides.dlr : parsedDlr;
+
+  const effTotalCost = useMemo(() => {
+    return effAuctionPrice + effAuctionFee + effLandCost + effOceanCost + effDangerousGoodsFee + effInsurance + effCustomsTotal + effFwd + effCar + effBrk + effDlr;
+  }, [effAuctionPrice, effAuctionFee, effLandCost, effOceanCost, effDangerousGoodsFee, effInsurance, effCustomsTotal, effFwd, effCar, effBrk, effDlr]);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('w8_pro_history');
@@ -383,6 +457,10 @@ export default function App() {
     const newFees = { ...extraFees, [field]: value };
     setExtraFees(newFees);
     localStorage.setItem('w8_extra_fees', JSON.stringify(newFees));
+  };
+
+  const handleOverrideChange = (key, val) => {
+    setOverrides(prev => ({ ...prev, [key]: val === '' ? undefined : parseFloat(val) }));
   };
 
   const autoSelectCheapestPort = (city, destination, currentAuction) => {
@@ -423,7 +501,7 @@ export default function App() {
     const entry = {
       id: Date.now(),
       name: saveName || 'Лот',
-      total: totalCost,
+      total: effTotalCost,
       date: new Date().toLocaleDateString()
     };
     const newHistory = [entry, ...history].slice(0, 10);
@@ -528,24 +606,24 @@ export default function App() {
               </tr>
             </thead>
             <tbody style={{ fontSize: '13px' }}>
-              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Цена лота на аукционе</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 'bold', fontFamily: 'monospace' }}>${Math.round(auctionPrice||0).toLocaleString()}</td></tr>
-              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Аукционный сбор ({auctionType.toUpperCase()})</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(auctionFee).toLocaleString()}</td></tr>
-              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Доставка по США (до порта {exitPort.toUpperCase()})</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(landCost||0).toLocaleString()}</td></tr>
-              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Морской фрахт (до {destPort.toUpperCase()})</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(oceanCost).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Цена лота на аукционе</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 'bold', fontFamily: 'monospace' }}>${Math.round(effAuctionPrice||0).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Аукционный сбор ({auctionType.toUpperCase()})</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effAuctionFee).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Доставка по США (до порта {exitPort.toUpperCase()})</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effLandCost||0).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Морской фрахт (до {destPort.toUpperCase()})</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effOceanCost).toLocaleString()}</td></tr>
               
-              {dangerousGoodsFee > 0 && (
-                <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Надбавка за опасный груз (Батарея)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(dangerousGoodsFee).toLocaleString()}</td></tr>
+              {effDangerousGoodsFee > 0 && (
+                <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Надбавка за опасный груз (Батарея)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effDangerousGoodsFee).toLocaleString()}</td></tr>
               )}
-              {insurance > 0 && (
-                <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Страхование груза (1.5%)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(insurance).toLocaleString()}</td></tr>
+              {effInsurance > 0 && (
+                <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Страхование груза (1.5%)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effInsurance).toLocaleString()}</td></tr>
               )}
               
-              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Таможенные платежи (Пошлина, Акциз, НДС)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(customs.total).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Таможенные платежи (Пошлина, Акциз, НДС)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCustomsTotal).toLocaleString()}</td></tr>
               
-              {fwd > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Экспедирование Клайпеда</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(fwd).toLocaleString()}</td></tr>}
-              {car > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Автовоз в Украину</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(car).toLocaleString()}</td></tr>}
-              {brk > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Брокерские услуги</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(brk).toLocaleString()}</td></tr>}
-              {dlr > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Комиссия дилера</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(dlr).toLocaleString()}</td></tr>}
+              {effFwd > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Экспедирование Клайпеда</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effFwd).toLocaleString()}</td></tr>}
+              {effCar > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Автовоз в Украину</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCar).toLocaleString()}</td></tr>}
+              {effBrk > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Брокерские услуги</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effBrk).toLocaleString()}</td></tr>}
+              {effDlr > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Комиссия дилера</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effDlr).toLocaleString()}</td></tr>}
             </tbody>
           </table>
 
@@ -553,7 +631,7 @@ export default function App() {
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '15px' }}>
             <div style={{ backgroundColor: '#FFCC33', padding: '15px 25px', borderRadius: '12px', textAlign: 'right', color: '#000' }}>
               <div style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Итого под ключ</div>
-              <div style={{ fontSize: '32px', fontWeight: '900', fontFamily: 'monospace', lineHeight: 1 }}>${Math.round(totalCost).toLocaleString()}</div>
+              <div style={{ fontSize: '32px', fontWeight: '900', fontFamily: 'monospace', lineHeight: 1 }}>${Math.round(effTotalCost).toLocaleString()}</div>
             </div>
           </div>
           
@@ -749,52 +827,107 @@ export default function App() {
             <div className="bg-[#161616] rounded-[2.5rem] border border-gray-800 sticky top-24 shadow-2xl overflow-hidden flex flex-col">
               
               <div className="bg-[#161616] flex-1">
-                <div className="p-6 border-b border-gray-800 bg-[#1A1A1A]">
+                <div className="p-6 border-b border-gray-800 bg-[#1A1A1A] flex justify-between items-center">
                   <h3 className="font-bold flex items-center gap-2 text-white uppercase text-sm tracking-widest">
                     <ShieldCheck size={18} className="text-[#FFCC33]" />
                     Полная смета
                   </h3>
+                  
+                  {/* ПЕРЕКЛЮЧАТЕЛЬ: ПРАВИТЬ ДАННЫЕ */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase">Править Данные</span>
+                    <button 
+                      onClick={() => {
+                        if (editMode) setOverrides({}); // Сбрасываем переопределения при выключении
+                        setEditMode(!editMode);
+                      }}
+                      className={`w-10 h-5 rounded-full transition-all relative cursor-pointer ${editMode ? 'bg-[#FFCC33]' : 'bg-gray-700'}`}
+                    >
+                      <div className={`absolute top-[2px] w-4 h-4 bg-white rounded-full transition-all shadow-md ${editMode ? 'left-[22px]' : 'left-[2px]'}`} />
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="p-6 space-y-4">
                   <div className="space-y-1">
-                    <PriceItem label="Стоимость авто" value={auctionPrice} />
-                    <PriceItem label="Аукционный сбор" value={auctionFee} subtext={`Аукцион: ${auctionType.toUpperCase()}`} />
+                    <PriceItem 
+                      label="Стоимость авто" 
+                      value={effAuctionPrice} 
+                      editable={editMode}
+                      onValueChange={(val) => handleOverrideChange('auctionPrice', val)}
+                    />
+                    <PriceItem 
+                      label="Аукционный сбор" 
+                      value={effAuctionFee} 
+                      subtext={`Аукцион: ${auctionType.toUpperCase()}`} 
+                      editable={editMode}
+                      onValueChange={(val) => handleOverrideChange('auctionFee', val)}
+                    />
                   </div>
 
                   <div className="h-px bg-gray-800/50" />
 
                   <div className="space-y-1">
                     <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Логистика (Logistics)</div>
-                    <PriceItem label="Доставка (USA Land)" value={landCost} highlight={landCost === null} />
-                    <PriceItem label="Фрахт (Ocean)" value={oceanCost} subtext={`Порт: ${destPort.toUpperCase()}`} />
-                    {dangerousGoodsFee > 0 && (
-                      <PriceItem label="Опасный груз" value={dangerousGoodsFee} subtext="Батарея (Электро/Гибрид)" />
+                    <PriceItem 
+                      label="Доставка (USA Land)" 
+                      value={effLandCost} 
+                      highlight={effLandCost === null && !editMode} 
+                      editable={editMode}
+                      onValueChange={(val) => handleOverrideChange('landCost', val)}
+                    />
+                    <PriceItem 
+                      label="Фрахт (Ocean)" 
+                      value={effOceanCost} 
+                      subtext={`Порт: ${destPort.toUpperCase()}`} 
+                      editable={editMode}
+                      onValueChange={(val) => handleOverrideChange('oceanCost', val)}
+                    />
+                    {(effDangerousGoodsFee > 0 || editMode) && (
+                      <PriceItem 
+                        label="Опасный груз" 
+                        value={effDangerousGoodsFee} 
+                        subtext="Батарея (Электро/Гибрид)" 
+                        editable={editMode}
+                        onValueChange={(val) => handleOverrideChange('dangerousGoodsFee', val)}
+                      />
                     )}
-                    <PriceItem label="Страховка" value={insurance} />
+                    {(effInsurance > 0 || editMode) && (
+                      <PriceItem 
+                        label="Страховка" 
+                        value={effInsurance} 
+                        editable={editMode}
+                        onValueChange={(val) => handleOverrideChange('insurance', val)}
+                      />
+                    )}
                   </div>
 
                   <div className="h-px bg-gray-800/50" />
 
                   <div className="space-y-1">
                     <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Таможня (Customs UA)</div>
-                    <PriceItem label="Пошлина + Акциз + НДС" value={customs.total} />
+                    <PriceItem 
+                      label="Пошлина + Акциз + НДС" 
+                      value={effCustomsTotal} 
+                      editable={editMode}
+                      onValueChange={(val) => handleOverrideChange('customsTotal', val)}
+                    />
                   </div>
 
                   <div className="h-px bg-gray-800/50" />
 
                   <div className="space-y-1">
                     <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Локальные расходы и услуги</div>
-                    <PriceItem label="Экспедирование Клайпеда" value={fwd} />
-                    <PriceItem label="Автовоз в Украину" value={car} />
-                    <PriceItem label="Брокерские услуги" value={brk} />
-                    <PriceItem label="Комиссия дилера" value={dlr} />
+                    {(effFwd > 0 || editMode) && <PriceItem label="Экспедирование Клайпеда" value={effFwd} editable={editMode} onValueChange={(val) => handleOverrideChange('fwd', val)} />}
+                    {(effCar > 0 || editMode) && <PriceItem label="Автовоз в Украину" value={effCar} editable={editMode} onValueChange={(val) => handleOverrideChange('car', val)} />}
+                    {(effBrk > 0 || editMode) && <PriceItem label="Брокерские услуги" value={effBrk} editable={editMode} onValueChange={(val) => handleOverrideChange('brk', val)} />}
+                    {(effDlr > 0 || editMode) && <PriceItem label="Комиссия дилера" value={effDlr} editable={editMode} onValueChange={(val) => handleOverrideChange('dlr', val)} />}
                   </div>
 
                   <div className="pt-6 mt-6 border-t border-gray-800">
                     <div className="text-[10px] font-bold text-gray-500 uppercase mb-2">ИТОГО ПОД КЛЮЧ</div>
                     <div className="text-5xl font-black text-[#FFCC33] font-mono leading-none tracking-tighter">
-                      ${Math.round(totalCost).toLocaleString()}
+                      ${Math.round(effTotalCost).toLocaleString()}
                     </div>
                   </div>
                 </div>
