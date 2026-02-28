@@ -1,14 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   MapPin, Calculator, DollarSign, Save, Trash2, History, Anchor, 
   Truck, Car, Tag, Info, X, ShieldCheck, Ship, 
-  Zap, Fuel, Calendar, Globe, Download, FileText, User
+  Zap, Fuel, Calendar, Globe, Download, FileText, User, Search, ChevronDown
 } from 'lucide-react';
+
 import { SHIPPING_DATA } from './assets/shipping_data';
-
-// --- ДАННЫЕ ДЛЯ РАСЧЕТОВ (ИЗ ВАШИХ ФАЙЛОВ) ---
-
-
 
 // --- ТАРИФЫ МОРСКОГО ФРАХТА ---
 const OCEAN_FREIGHT_BASE = {
@@ -106,6 +103,78 @@ const calculateUkraineCustoms = (price, year, volumeCm3, fuelType) => {
 
 // --- COMPONENTS ---
 
+const SearchableSelect = ({ options, value, onChange, placeholder }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredOptions = useMemo(() => {
+    return options.filter(opt => opt.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [options, searchTerm]);
+
+  return (
+    <div ref={wrapperRef} className="relative w-full">
+      <div 
+        className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus-within:border-[#FFCC33] flex justify-between items-center text-white"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={value ? "text-white" : "text-gray-500"}>
+          {value || placeholder}
+        </span>
+        <ChevronDown size={16} className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-2 bg-[#1F1F1F] border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto">
+          <div className="sticky top-0 bg-[#1F1F1F] p-2 border-b border-gray-800">
+            <div className="flex items-center bg-[#161616] rounded-lg px-3 py-2">
+              <Search size={14} className="text-gray-500 mr-2" />
+              <input
+                type="text"
+                className="bg-transparent border-none outline-none text-white w-full text-sm"
+                placeholder="Поиск..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+              />
+            </div>
+          </div>
+          <div className="p-1">
+            {filteredOptions.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-gray-500 text-center">Ничего не найдено</div>
+            ) : (
+              filteredOptions.map(opt => (
+                <div
+                  key={opt}
+                  className={`px-4 py-3 text-sm rounded-lg cursor-pointer transition-colors ${value === opt ? 'bg-[#FFCC33]/20 text-[#FFCC33]' : 'text-white hover:bg-white/5'}`}
+                  onClick={() => {
+                    onChange(opt);
+                    setIsOpen(false);
+                    setSearchTerm('');
+                  }}
+                >
+                  {opt}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const PriceItem = ({ label, value, highlight = false, subtext }) => (
   <div className="flex justify-between items-center py-1 group cursor-pointer hover:bg-white/5 rounded-lg px-2 -mx-2 transition-colors">
     <div>
@@ -158,7 +227,12 @@ export default function App() {
   const [saveName, setSaveName] = useState('');
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-  // Calculations
+  const sortedCities = useMemo(() => {
+    const cities = SHIPPING_DATA[auctionType] || [];
+    return [...cities].sort((a, b) => a.city.localeCompare(b.city));
+  }, [auctionType]);
+
+  // Добавлена защита (optional chaining) от пустых данных
   const auctionFee = useMemo(() => calculateAuctionFee(auctionPrice, auctionType), [auctionPrice, auctionType]);
   const currentCityObj = useMemo(() => SHIPPING_DATA[auctionType]?.find(c => c.city === selectedCity), [selectedCity, auctionType]);
   const landCost = useMemo(() => (currentCityObj ? currentCityObj.rates[exitPort] : null), [currentCityObj, exitPort]);
@@ -236,8 +310,7 @@ export default function App() {
     }
   };
 
-  const handleCityChange = (e) => {
-    const newCity = e.target.value;
+  const handleCityChange = (newCity) => {
     setSelectedCity(newCity);
     autoSelectCheapestPort(newCity, destPort, auctionType);
   };
@@ -265,8 +338,6 @@ export default function App() {
   const generatePDF = async () => {
     setIsGeneratingPdf(true);
     
-    // Сбрасываем скролл на самый верх перед генерацией, 
-    // чтобы html2canvas не захватил пустое пространство из-за прокрутки пользователя
     window.scrollTo(0, 0);
 
     try {
@@ -283,10 +354,9 @@ export default function App() {
       const element = document.getElementById('pdf-invoice-template');
       
       const opt = {
-        margin:       0.2, // Уменьшенные отступы документа
+        margin:       0.2,
         filename:     `${saveName || 'W8_Calculation'}.pdf`,
         image:        { type: 'jpeg', quality: 1 },
-        // scrollY: 0 и scrollX: 0 жестко фиксируют позицию рендера, предотвращая баг с пустым местом сверху
         html2canvas:  { scale: 2, useCORS: true, scrollY: 0, scrollX: 0 },
         jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
@@ -310,10 +380,7 @@ export default function App() {
   return (
     <div className="relative overflow-x-hidden min-h-screen bg-[#0F0F0F] text-gray-200 font-sans selection:bg-[#FFCC33] selection:text-black">
       
-      {/* СКРЫТЫЙ ШАБЛОН ДЛЯ PDF 
-        Ширина 750px идеально ложится на А4 без горизонтального переполнения.
-        Внутренние отступы уменьшены (с 12px до 8px), чтобы все компактно влезло на 1 страницу.
-      */}
+      {/* СКРЫТЫЙ ШАБЛОН ДЛЯ PDF */}
       <div style={{ position: 'absolute', top: 0, left: 0, zIndex: -100, pointerEvents: 'none' }}>
         <div id="pdf-invoice-template" style={{ width: '750px', backgroundColor: '#ffffff', color: '#000000', padding: '30px', boxSizing: 'border-box', fontFamily: 'sans-serif' }}>
           
@@ -490,10 +557,12 @@ export default function App() {
                 </InputWrapper>
 
                 <InputWrapper label="Площадка (USA)" icon={MapPin}>
-                  <select value={selectedCity} onChange={handleCityChange} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
-                    <option value="">Выберите город</option>
-                    {SHIPPING_DATA[auctionType].map(l => <option key={l.city} value={l.city}>{l.city}</option>)}
-                  </select>
+                  <SearchableSelect 
+                    options={sortedCities.map(c => c.city)}
+                    value={selectedCity}
+                    onChange={handleCityChange}
+                    placeholder="Выберите город"
+                  />
                 </InputWrapper>
               </div>
 
