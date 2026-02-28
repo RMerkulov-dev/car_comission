@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   MapPin, Calculator, DollarSign, Save, Trash2, History, Anchor, 
-  ArrowRight, Truck, Car, Tag, Info, X, ShieldCheck, Ship, 
-  Zap, Fuel, Calendar, Globe, ChevronDown 
+  Truck, Car, Tag, Info, X, ShieldCheck, Ship, 
+  Zap, Fuel, Calendar, Globe 
 } from 'lucide-react';
 
 // --- ДАННЫЕ ДЛЯ РАСЧЕТОВ (ИЗ ВАШИХ ФАЙЛОВ) ---
@@ -73,25 +73,24 @@ const SHIPPING_DATA = {
   ]
 };
 
-// --- ТАРИФЫ МОРСКОГО ФРАХТА (ПРАВКИ ЗАКАЗЧИКА ПО КЛАЙПЕДЕ) ---
+// --- ТАРИФЫ МОРСКОГО ФРАХТА (ОБНОВЛЕНЫ ПО СКРИНШОТУ ЗАКАЗЧИКА) ---
 const OCEAN_FREIGHT_BASE = {
-  nj: { klp: 750, od: 1250, poti: 1350 },
-  ga: { klp: 850, od: 1350, poti: 1450 },
+  nj: { klp: 575, od: 1250, poti: 1350 },
+  ga: { klp: 675, od: 1350, poti: 1450 },
   fl: { klp: 800, od: 1300, poti: 1400 },
-  tx: { klp: 950, od: 1450, poti: 1550 },
+  tx: { klp: 750, od: 1450, poti: 1550 },
   ca: { klp: 1150, od: 1650, poti: 1750 }
 };
 
+// Убраны Внедорожник/Пикап
 const VEHICLE_TYPES = [
   { id: 'sedan', label: 'Седан', extra: 0, icon: Car },
   { id: 'suv', label: 'Кроссовер', extra: 150, icon: Car },
-  { id: 'large-suv', label: 'Внедорожник / Минивэн', extra: 300, icon: Truck },
-  { id: 'pickup', label: 'Пикап / Грузовик', extra: 500, icon: Truck },
   { id: 'moto', label: 'Мотоцикл', extra: -200, icon: Tag },
 ];
 
 const EXIT_PORTS = [
-  { id: 'nj', label: 'Порт Нью-Джерси (NJ)' },
+  { id: 'nj', label: 'Порт Нью-Джерси (NY/NJ)' },
   { id: 'ga', label: 'Порт Саванна (GA)' },
   { id: 'fl', label: 'Порт Майами (FL)' },
   { id: 'tx', label: 'Порт Хьюстон (TX)' },
@@ -100,20 +99,14 @@ const EXIT_PORTS = [
 
 const DEST_PORTS = [
   { id: 'klp', label: 'Клайпеда, Литва' },
-  { id: 'od', label: 'Одесса, Украина' },
-  { id: 'poti', label: 'Поти, Грузия' },
+  { id: 'od', label: 'Одесса, Украина', disabled: true },
+  { id: 'poti', label: 'Поти, Грузия', disabled: true },
 ];
 
 const FUEL_TYPES = [
   { id: 'petrol', label: 'Бензин' },
   { id: 'diesel', label: 'Дизель' },
   { id: 'electric', label: 'Электро' }
-];
-
-const CAR_MAKES = [
-  "Acura", "Alfa Romeo", "Audi", "BMW", "Chevrolet", "Chrysler", "Dodge", "Ford", "GMC", "Honda", 
-  "Hyundai", "Infiniti", "Jeep", "Kia", "Land Rover", "Lexus", "Lincoln", "Mazda", "Mercedes-Benz", 
-  "Mitsubishi", "Nissan", "Porsche", "Ram", "Subaru", "Tesla", "Toyota", "Volkswagen", "Volvo", "Другая"
 ];
 
 const AUCTIONS = [
@@ -199,7 +192,6 @@ export default function App() {
   const [vehicleType, setVehicleType] = useState('sedan');
   const [auctionPrice, setAuctionPrice] = useState('');
   const [auctionType, setAuctionType] = useState('copart');
-  const [carMake, setCarMake] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [exitPort, setExitPort] = useState('nj');
   const [destPort, setDestPort] = useState('klp');
@@ -238,12 +230,24 @@ export default function App() {
   useEffect(() => {
     const saved = localStorage.getItem('w8_pro_history');
     if (saved) setHistory(JSON.parse(saved));
+    
+    // Перезаписываем тайтл и иконку вкладки в браузере
+    document.title = "Car Commission Calculator";
+    const link = document.querySelector("link[rel~='icon']");
+    if (link) {
+      link.href = "data:image/svg+xml,<svg xmlns=%22[http://www.w3.org/2000/svg%22](http://www.w3.org/2000/svg%22) viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>";
+    } else {
+       const newLink = document.createElement('link');
+       newLink.rel = 'icon';
+       newLink.href = "data:image/svg+xml,<svg xmlns=%22[http://www.w3.org/2000/svg%22](http://www.w3.org/2000/svg%22) viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>";
+       document.head.appendChild(newLink);
+    }
   }, []);
 
   const saveToHistory = () => {
     const entry = {
       id: Date.now(),
-      name: saveName || carMake || 'Лот',
+      name: saveName || 'Лот',
       total: totalCost,
       date: new Date().toLocaleDateString()
     };
@@ -284,7 +288,7 @@ export default function App() {
               1. Автомобиль и параметры лота
             </h2>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {VEHICLE_TYPES.map(type => (
                 <button
                   key={type.id}
@@ -297,14 +301,7 @@ export default function App() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <InputWrapper label="Марка" icon={Tag}>
-                <select value={carMake} onChange={(e) => setCarMake(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33] transition-colors">
-                  <option value="">Выберите марку</option>
-                  {CAR_MAKES.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </InputWrapper>
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <InputWrapper label="Год" icon={Calendar}>
                 <select value={prodYear} onChange={(e) => setProdYear(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33] transition-colors">
                   {Array.from({ length: 30 }, (_, i) => 2024 - i).map(y => <option key={y} value={y}>{y}</option>)}
@@ -368,7 +365,7 @@ export default function App() {
 
               <InputWrapper label="Порт назначения" icon={Anchor}>
                 <select value={destPort} onChange={(e) => setDestPort(e.target.value)} className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none cursor-pointer focus:border-[#FFCC33]">
-                  {DEST_PORTS.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+                  {DEST_PORTS.map(d => <option key={d.id} value={d.id} disabled={d.disabled}>{d.label}</option>)}
                 </select>
               </InputWrapper>
             </div>
@@ -498,7 +495,6 @@ export default function App() {
         ::-webkit-scrollbar-thumb:hover { background: #444; }
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23555'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); background-position: right 1rem center; background-repeat: no-repeat; background-size: 1rem; padding-right: 2.5rem; }
       `}</style>
     </div>
   );
