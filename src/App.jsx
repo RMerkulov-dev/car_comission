@@ -62,64 +62,70 @@ const AUCTIONS = [
 const calculateCopartFee = (price) => {
   const p = parseFloat(price) || 0;
   if (p <= 0) return 0;
-  
-  // Secured Payment Methods (Buyer Fee)
+
+  // BUYER FEE — Secured Payment Methods / Non-Clean Title
+  // Источник: copart.com/content/us/en/member-fees-us-licensed-more
   let buyerFee = 0;
-  if (p < 100) buyerFee = 1;
-  else if (p < 200) buyerFee = 25;
-  else if (p < 300) buyerFee = 60;
-  else if (p < 350) buyerFee = 85;
-  else if (p < 400) buyerFee = 100;
-  else if (p < 450) buyerFee = 125;
-  else if (p < 500) buyerFee = 135;
-  else if (p < 550) buyerFee = 145;
-  else if (p < 600) buyerFee = 155;
-  else if (p < 700) buyerFee = 170;
-  else if (p < 800) buyerFee = 195;
-  else if (p < 900) buyerFee = 215;
-  else if (p < 1000) buyerFee = 230;
-  else if (p < 1200) buyerFee = 250;
-  else if (p < 1300) buyerFee = 270;
-  else if (p < 1400) buyerFee = 285;
-  else if (p < 1500) buyerFee = 300;
-  else if (p < 1600) buyerFee = 315;
-  else if (p < 1700) buyerFee = 330;
-  else if (p < 1800) buyerFee = 350;
-  else if (p < 2000) buyerFee = 370;
-  else if (p < 2400) buyerFee = 390;
-  else if (p < 2500) buyerFee = 425;
-  else if (p < 3000) buyerFee = 460;
-  else if (p < 3500) buyerFee = 505;
-  else if (p < 4000) buyerFee = 555;
-  else if (p < 4500) buyerFee = 600;
-  else if (p < 5000) buyerFee = 625;
-  else if (p < 5500) buyerFee = 650;
-  else if (p < 6000) buyerFee = 675;
-  else if (p < 6500) buyerFee = 700;
-  else if (p < 7000) buyerFee = 720;
-  else if (p < 7500) buyerFee = 755;
-  else if (p < 8000) buyerFee = 775;
-  else if (p < 8500) buyerFee = 800;
-  else if (p < 10000) buyerFee = 820;
-  else if (p < 11500) buyerFee = 850;
-  else if (p < 12000) buyerFee = 860;
-  else if (p < 12500) buyerFee = 875;
-  else if (p < 15000) buyerFee = 890;
-  else buyerFee = p * 0.06;
+  if (p < 50)          buyerFee = 1;
+  else if (p < 100)    buyerFee = 1;
+  else if (p < 200)    buyerFee = 25;
+  else if (p < 300)    buyerFee = 60;
+  else if (p < 350)    buyerFee = 85;
+  else if (p < 400)    buyerFee = 100;
+  else if (p < 450)    buyerFee = 125;
+  else if (p < 500)    buyerFee = 135;
+  else if (p < 550)    buyerFee = 145;
+  else if (p < 600)    buyerFee = 155;
+  else if (p < 700)    buyerFee = 170;
+  else if (p < 800)    buyerFee = 195;
+  else if (p < 900)    buyerFee = 215;
+  else if (p < 1000)   buyerFee = 230;
+  else if (p < 1200)   buyerFee = 250;
+  else if (p < 1300)   buyerFee = 270;
+  else if (p < 1400)   buyerFee = 285;
+  else if (p < 1500)   buyerFee = 300;
+  else if (p < 1600)   buyerFee = 315;
+  else if (p < 1700)   buyerFee = 330;
+  else if (p < 1800)   buyerFee = 350;
+  else if (p < 2000)   buyerFee = 370;
+  else if (p < 2400)   buyerFee = 390;
+  else if (p < 2500)   buyerFee = 425;
+  else if (p < 3000)   buyerFee = 460;
+  else if (p < 3500)   buyerFee = 505;
+  else if (p < 4000)   buyerFee = 555;
+  else if (p < 4500)   buyerFee = 600;
+  else if (p < 5000)   buyerFee = 625;
+  else if (p < 5500)   buyerFee = 650;
+  else if (p < 6000)   buyerFee = 675;
+  else if (p < 6500)   buyerFee = 700;
+  else if (p < 7000)   buyerFee = 720;
+  else if (p < 7500)   buyerFee = 755;
+  else if (p < 8000)   buyerFee = 775;
+  else if (p < 8500)   buyerFee = 800;
+  else if (p < 9000)   buyerFee = 820;
+  else if (p < 10000)  buyerFee = 820;
+  else if (p < 10500)  buyerFee = 850;
+  else if (p < 11000)  buyerFee = 850;
+  else if (p < 11500)  buyerFee = 850;
+  else if (p < 12000)  buyerFee = 860;
+  else if (p < 12500)  buyerFee = 875;
+  else if (p < 15000)  buyerFee = 890;
+  else buyerFee = p * 0.06; // 6% of sale price
 
-  // Virtual Bid Fee (Live Bid)
+  // VIRTUAL BID FEE — Live Bid (онлайн-ставка)
+  // Источник: copart.com/content/us/en/member-fees-us-licensed-more
   let virtualFee = 0;
-  if (p < 100) virtualFee = 0;
-  else if (p < 500) virtualFee = 50;
-  else if (p < 1000) virtualFee = 65;
-  else if (p < 1500) virtualFee = 85;
-  else if (p < 2000) virtualFee = 95;
-  else if (p < 4000) virtualFee = 110;
-  else if (p < 6000) virtualFee = 125;
-  else if (p < 8000) virtualFee = 145;
-  else virtualFee = 160;
+  if (p < 100)         virtualFee = 0;
+  else if (p < 500)    virtualFee = 50;
+  else if (p < 1000)   virtualFee = 65;
+  else if (p < 1500)   virtualFee = 85;
+  else if (p < 2000)   virtualFee = 95;
+  else if (p < 4000)   virtualFee = 110;
+  else if (p < 6000)   virtualFee = 125;
+  else if (p < 8000)   virtualFee = 145;
+  else                 virtualFee = 160;
 
-  // Fixed Fees: Service (Gate), Environmental, Title Handling
+  // Fixed Fees: Gate $95 + Environmental $15 + Title (FedEx) $20
   const gateFee = 95;
   const envFee = 15;
   const titleFee = 20;
