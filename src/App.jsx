@@ -5,13 +5,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   MapPin, Calculator, DollarSign, Save, Trash2, History, Anchor, 
   Truck, Car, Tag, Info, X, ShieldCheck, Ship, 
-  Zap, Fuel, Calendar, Globe, Download, FileText, User, Search, ChevronDown
+  Zap, Fuel, Calendar, Globe, Download, FileText, User, Search, ChevronDown, Activity
 } from 'lucide-react';
 
-// --- INLINE SHIPPING DATA TO RESOLVE IMPORT ERROR IN PREVIEW ---
-// УДАЛИТЕ ЭТОТ БЛОК В ВАШЕМ ЛОКАЛЬНОМ ПРОЕКТЕ, ЕСЛИ ИСПОЛЬЗУЕТЕ ИМПОРТ ВЫШЕ
-
-// -------------------------------------------------------------
 
 // --- ТАРИФЫ МОРСКОГО ФРАХТА ---
 const OCEAN_FREIGHT_BASE = {
@@ -199,12 +195,12 @@ const calculateAuctionFee = (price, auction) => {
 };
 
 // ТАМОЖНЯ УКРАИНА
-const calculateUkraineCustoms = (price, year, volumeCm3, fuelType, auctionFeeValue = 0) => {
+const calculateUkraineCustoms = (price, year, volumeCm3, fuelType, auctionFeeValue = 0, exchangeRate = 1.15) => {
   const p = parseFloat(price) || 0;
   const vol = parseFloat(volumeCm3) || 0;
   const fee = parseFloat(auctionFeeValue) || 0;
 
-  const EUR_TO_USD = 1.15; // Обновленный курс 1 EUR = 1.15 USD
+  const EUR_TO_USD = exchangeRate; // Динамический кросс-курс EUR к USD
   const FIXED_FEE = 1600;
 
   // Базовая цена = Цена аукциона + Аукционный сбор + 1600$
@@ -402,6 +398,34 @@ export default function App() {
   const [editMode, setEditMode] = useState(false);
   const [overrides, setOverrides] = useState({});
 
+  // Валютный курс НБУ
+  const [eurToUsdRate, setEurToUsdRate] = useState(1.15); // Дефолтный курс, если API не ответит
+  const [isRateLoading, setIsRateLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchNbuRates = async () => {
+      try {
+        const response = await fetch('https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json');
+        const data = await response.json();
+        
+        const usdData = data.find(c => c.cc === 'USD');
+        const eurData = data.find(c => c.cc === 'EUR');
+
+        if (usdData && eurData) {
+          // Кросс-курс: Стоимость 1 Евро в Гривнах / Стоимость 1 Доллара в Гривнах = Стоимость 1 Евро в Долларах
+          const crossRate = eurData.rate / usdData.rate;
+          setEurToUsdRate(crossRate);
+        }
+      } catch (error) {
+        console.error('Ошибка при получении курсов валют НБУ. Используется резервный курс.', error);
+      } finally {
+        setIsRateLoading(false);
+      }
+    };
+
+    fetchNbuRates();
+  }, []);
+
   const sortedCities = useMemo(() => {
     const cities = SHIPPING_DATA[auctionType] || [];
     return [...cities].sort((a, b) => a.city.localeCompare(b.city));
@@ -422,7 +446,7 @@ export default function App() {
   
   const autoInsurance = useMemo(() => insuranceEnabled ? (parseFloat(auctionPrice) || 0) * 0.015 : 0, [auctionPrice, insuranceEnabled]);
   
-  const autoCustoms = useMemo(() => calculateUkraineCustoms(auctionPrice, prodYear, engineVolume, fuelType, autoAuctionFee), [auctionPrice, prodYear, engineVolume, fuelType, autoAuctionFee]);
+  const autoCustoms = useMemo(() => calculateUkraineCustoms(auctionPrice, prodYear, engineVolume, fuelType, autoAuctionFee, eurToUsdRate), [auctionPrice, prodYear, engineVolume, fuelType, autoAuctionFee, eurToUsdRate]);
 
   const parsedFwd = parseFloat(extraFees.forwarding) || 0;
   const parsedCar = parseFloat(extraFees.carrier) || 0;
@@ -627,7 +651,7 @@ export default function App() {
               )}
               
               {/* РАЗБИТАЯ ТАМОЖНЯ В PDF */}
-              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Таможня: Ввозная пошлина (10%)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCustomsDuty).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Таможня: Ввозная пошлина (10%) <span style={{fontSize: '10px', color: '#666'}}>(Курс НБУ €1 = ${eurToUsdRate.toFixed(4)})</span></td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCustomsDuty).toLocaleString()}</td></tr>
               <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Таможня: Акцизный сбор</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCustomsExcise).toLocaleString()}</td></tr>
               <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Таможня: НДС (20%)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCustomsVat).toLocaleString()}</td></tr>
               
@@ -916,7 +940,14 @@ export default function App() {
 
                   {/* РАЗБИТЫЙ ТАМОЖЕННЫЙ БЛОК */}
                   <div className="space-y-1">
-                    <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Таможня (Customs UA)</div>
+                    <div className="text-[9px] text-gray-500 font-bold uppercase mb-1 flex justify-between items-center">
+                      <span>Таможня (Customs UA)</span>
+                      {!isRateLoading && (
+                        <span className="text-[#FFCC33] flex items-center gap-1" title="Официальный кросс-курс НБУ">
+                          <Activity size={10} /> €1 = ${eurToUsdRate.toFixed(4)}
+                        </span>
+                      )}
+                    </div>
                     <PriceItem 
                       label="Ввозная пошлина (10%)" 
                       value={effCustomsDuty} 
