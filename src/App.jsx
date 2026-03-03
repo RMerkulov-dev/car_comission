@@ -1,8 +1,5 @@
-// Раскомментируйте эту строку в вашем локальном проекте:
-import { SHIPPING_DATA } from './assets/shipping_data';
-
 // Раскомментируйте эту строку в вашем локальном проекте и удалите INLINE SHIPPING DATA ниже:
-// import { SHIPPING_DATA } from './assets/shipping_data';
+import { SHIPPING_DATA } from './assets/shipping_data';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
@@ -14,6 +11,7 @@ import {
 // --- INLINE SHIPPING DATA TO RESOLVE IMPORT ERROR IN PREVIEW ---
 // УДАЛИТЕ ЭТОТ БЛОК В ВАШЕМ ЛОКАЛЬНОМ ПРОЕКТЕ, ЕСЛИ ИСПОЛЬЗУЕТЕ ИМПОРТ ВЫШЕ
 
+// -------------------------------------------------------------
 
 // --- ТАРИФЫ МОРСКОГО ФРАХТА ---
 const OCEAN_FREIGHT_BASE = {
@@ -63,7 +61,6 @@ const calculateCopartFee = (price) => {
   const p = parseFloat(price) || 0;
   if (p <= 0) return 0;
   
-  // Secured Payment Methods (Buyer Fee)
   let buyerFee = 0;
   if (p < 100) buyerFee = 1;
   else if (p < 200) buyerFee = 25;
@@ -107,7 +104,6 @@ const calculateCopartFee = (price) => {
   else if (p < 15000) buyerFee = 890;
   else buyerFee = p * 0.06;
 
-  // Virtual Bid Fee (Live Bid)
   let virtualFee = 0;
   if (p < 100) virtualFee = 0;
   else if (p < 500) virtualFee = 50;
@@ -119,7 +115,6 @@ const calculateCopartFee = (price) => {
   else if (p < 8000) virtualFee = 145;
   else virtualFee = 160;
 
-  // Fixed Fees: Service (Gate), Environmental, Title Handling
   const gateFee = 95;
   const envFee = 15;
   const titleFee = 20;
@@ -131,7 +126,6 @@ const calculateIAAIFee = (price) => {
   const p = parseFloat(price) || 0;
   if (p <= 0) return 0;
 
-  // ИСПОЛЬЗУЕМ "HIGH VOLUME FEE" (совпадает с вашим скриншотом: 4300$ -> 600$)
   let buyerFee = 0;
   if (p < 100) buyerFee = 1;
   else if (p < 200) buyerFee = 25;
@@ -158,8 +152,8 @@ const calculateIAAIFee = (price) => {
   else if (p < 2500) buyerFee = 425;
   else if (p < 3000) buyerFee = 460;
   else if (p < 3500) buyerFee = 505;
-  else if (p < 4000) buyerFee = 555; // Nissan на скрине: $3800 -> $555
-  else if (p < 4500) buyerFee = 600; // Tiguan на скрине: $4300 -> $600
+  else if (p < 4000) buyerFee = 555; 
+  else if (p < 4500) buyerFee = 600; 
   else if (p < 5000) buyerFee = 625;
   else if (p < 5500) buyerFee = 650;
   else if (p < 6000) buyerFee = 675;
@@ -175,25 +169,21 @@ const calculateIAAIFee = (price) => {
   else if (p < 15000) buyerFee = 890;
   else buyerFee = p * 0.06;
 
-  // Internet Bid Fee (Live Online Bid Fee)
   let virtualFee = 0;
   if (p < 100) virtualFee = 0;
   else if (p < 500) virtualFee = 50;
   else if (p < 1000) virtualFee = 65;
   else if (p < 1500) virtualFee = 85;
   else if (p < 2000) virtualFee = 95;
-  else if (p < 4000) virtualFee = 110; // Nissan на скрине: $3800 -> $110
-  else if (p < 6000) virtualFee = 125; // Tiguan на скрине: $4300 -> $125
+  else if (p < 4000) virtualFee = 110; 
+  else if (p < 6000) virtualFee = 125; 
   else if (p < 8000) virtualFee = 145;
   else virtualFee = 160;
 
-  // Fixed Fees: Service, Environmental, Title Handling
   const serviceFee = 95;
   const envFee = 15;
   const titleFee = 20;
 
-  // В общую сумму не включены Transaction Tax ($5), так как они варьируются от штата,
-  // но основные сборы теперь 1 в 1 как на аукционе
   return buyerFee + virtualFee + serviceFee + envFee + titleFee;
 };
 
@@ -205,60 +195,66 @@ const calculateAuctionFee = (price, auction) => {
   if (auction === 'iaai') return calculateIAAIFee(p);
   if (auction === 'manheim') return Math.max(350, p * 0.05);
   
-  return 750 + (p * 0.045); // fallback
+  return 750 + (p * 0.045); 
 };
 
-// ТАМОЖНЯ УКРАИНА 2026
-// Источник: brokstar.com.ua/spravochniki/stavki-poshliny-i-akciznogo-sbora-na-avto
-//
-// Таможенная база = цена авто + аукционный сбор + $1600 (фиксированный сбор)
-// Пошлина  = таможенная база × 10%
-// Акциз    = базовая ставка (€) × (объём / 1000) × полных лет × курс EUR→USD
-//              Бензин / Гибрид: 50 €/л | Дизель: 75 €/л | Электро: 1 €/кВт мощности
-// НДС      = цена авто × 20%
-// ИТОГО    = пошлина + акциз + НДС
-//
-// Курс EUR→USD: 1.17 (верифицирован на примере из калькулятора)
+// ТАМОЖНЯ УКРАИНА
 const calculateUkraineCustoms = (price, year, volumeCm3, fuelType, auctionFeeValue = 0) => {
   const p = parseFloat(price) || 0;
   const vol = parseFloat(volumeCm3) || 0;
   const fee = parseFloat(auctionFeeValue) || 0;
 
-  const EUR_TO_USD = 1.17; // верифицирован на примере: $3575 + $795 + $1600, бензин 2.4л, 2018г → $2436
-  const FIXED_FEE = 1600;  // фиксированный таможенный сбор
+  const EUR_TO_USD = 1.15; // Обновленный курс 1 EUR = 1.15 USD
+  const FIXED_FEE = 1600;
 
-  const currentYear = new Date().getFullYear();
-  // Полных лет = текущий год − год выпуска (минимум 1, максимум 15)
-  let vehicleAge = currentYear - parseInt(year || currentYear);
-  vehicleAge = Math.max(1, Math.min(15, vehicleAge));
-
-  if (p === 0) return { duty: 0, excise: 0, vat: 0, total: 0 };
-
-  // Таможенная база для расчёта пошлины
+  // Базовая цена = Цена аукциона + Аукционный сбор + 1600$
   const customsBase = p + fee + FIXED_FEE;
 
-  // --- ЭЛЕКТРОМОБИЛЬ ---
-  // Пошлина: 0% | Акциз: 1 €/кВт | НДС: цена × 20%
+  // Возраст (КВ): Текущий год - Год выпуска - 1 (максимум 15, для авто младше 1 года = 1)
+  const currentYear = new Date().getFullYear();
+  let vehicleAge = currentYear - parseInt(year || currentYear) - 1;
+  vehicleAge = Math.max(1, Math.min(15, vehicleAge));
+
+  let duty = 0;
+  let excise = 0;
+  let vat = 0;
+
   if (fuelType === 'electric') {
-    const batteryKw = vol > 0 ? vol : 60;
-    const excise = batteryKw * 1 * EUR_TO_USD;
-    const duty = 0;
-    const vat = p * 0.20;
-    return { duty, excise, vat, total: duty + excise + vat };
+    // Электромобили (EV)
+    duty = 0;
+    const batteryKw = vol > 0 ? vol : 60; // Если объем пустой, ставим 60 кВт как базу
+    excise = batteryKw * 1 * EUR_TO_USD;
+    // НДС 20% от (Таможенная стоимость + Акциз)
+    vat = (customsBase + excise) * 0.20;
+  } else if (fuelType === 'hybrid') {
+    // Гибридные автомобили (HEV / PHEV)
+    duty = customsBase * 0.10;
+    excise = 100 * EUR_TO_USD;
+    vat = (customsBase + duty + excise) * 0.20;
+  } else {
+    // Автомобили с ДВС (Бензин и Дизель)
+    duty = customsBase * 0.10;
+    
+    // БС — базовая ставка в евро
+    let baseRateEur = 0;
+    if (fuelType === 'petrol') {
+      baseRateEur = vol <= 3000 ? 50 : 100;
+    } else if (fuelType === 'diesel') {
+      baseRateEur = vol <= 3500 ? 75 : 150;
+    }
+    
+    // Акциз = БС * КД * КВ (где КД = Объем / 1000)
+    excise = baseRateEur * (vol / 1000) * vehicleAge * EUR_TO_USD;
+    vat = (customsBase + duty + excise) * 0.20;
   }
 
-  // --- БЕНЗИН / ДИЗЕЛЬ / ГИБРИД ---
-  // Пошлина = таможенная база × 10%
-  const duty = customsBase * 0.10;
-
-  // Акциз = ставка (€/л) × (объём / 1000) × лет × курс
-  const baseRateEur = fuelType === 'diesel' ? 75 : 50; // бензин и гибрид = 50€
-  const excise = baseRateEur * (vol / 1000) * vehicleAge * EUR_TO_USD;
-
-  // НДС = цена авто × 20%
-  const vat = p * 0.20;
-
-  return { duty, excise, vat, total: duty + excise + vat };
+  return { 
+    base: customsBase,
+    duty, 
+    excise, 
+    vat, 
+    total: duty + excise + vat 
+  };
 };
 
 // --- COMPONENTS ---
@@ -335,7 +331,6 @@ const SearchableSelect = ({ options, value, onChange, placeholder }) => {
   );
 };
 
-// Обновленный компонент PriceItem с поддержкой редактирования
 const PriceItem = ({ label, value, highlight = false, subtext, editable = false, onValueChange }) => (
   <div className="flex justify-between items-center py-1 group rounded-lg px-2 -mx-2 transition-colors">
     <div>
@@ -348,7 +343,7 @@ const PriceItem = ({ label, value, highlight = false, subtext, editable = false,
           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">$</span>
           <input
             type="number"
-            value={value === null || value === undefined ? '' : Math.round(value)}
+            value={value === null || value === undefined ? '' : Number(value.toFixed(2))}
             onChange={(e) => onValueChange(e.target.value)}
             className="w-24 bg-[#1F1F1F] border border-gray-700 rounded-md py-1 pl-5 pr-2 text-sm font-mono font-bold text-right text-[#FFCC33] outline-none focus:border-[#FFCC33] transition-colors"
             placeholder="0"
@@ -426,6 +421,7 @@ export default function App() {
   }, [fuelType]);
   
   const autoInsurance = useMemo(() => insuranceEnabled ? (parseFloat(auctionPrice) || 0) * 0.015 : 0, [auctionPrice, insuranceEnabled]);
+  
   const autoCustoms = useMemo(() => calculateUkraineCustoms(auctionPrice, prodYear, engineVolume, fuelType, autoAuctionFee), [auctionPrice, prodYear, engineVolume, fuelType, autoAuctionFee]);
 
   const parsedFwd = parseFloat(extraFees.forwarding) || 0;
@@ -440,7 +436,13 @@ export default function App() {
   const effOceanCost = overrides.oceanCost !== undefined ? overrides.oceanCost : autoOceanCost;
   const effDangerousGoodsFee = overrides.dangerousGoodsFee !== undefined ? overrides.dangerousGoodsFee : autoDangerousGoodsFee;
   const effInsurance = overrides.insurance !== undefined ? overrides.insurance : autoInsurance;
-  const effCustomsTotal = overrides.customsTotal !== undefined ? overrides.customsTotal : autoCustoms.total;
+  
+  // ТАМОЖНЯ (Разбитая на 3 показателя)
+  const effCustomsDuty = overrides.customsDuty !== undefined ? overrides.customsDuty : autoCustoms.duty;
+  const effCustomsExcise = overrides.customsExcise !== undefined ? overrides.customsExcise : autoCustoms.excise;
+  const effCustomsVat = overrides.customsVat !== undefined ? overrides.customsVat : autoCustoms.vat;
+  const effCustomsTotal = effCustomsDuty + effCustomsExcise + effCustomsVat;
+
   const effFwd = overrides.fwd !== undefined ? overrides.fwd : parsedFwd;
   const effCar = overrides.car !== undefined ? overrides.car : parsedCar;
   const effBrk = overrides.brk !== undefined ? overrides.brk : parsedBrk;
@@ -457,17 +459,6 @@ export default function App() {
     const savedFees = localStorage.getItem('w8_extra_fees');
     if (savedFees) {
       try { setExtraFees(JSON.parse(savedFees)); } catch(e) {}
-    }
-    
-    document.title = "Car Commission Calculator";
-    const link = document.querySelector("link[rel~='icon']");
-    if (link) {
-      link.href = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>";
-    } else {
-       const newLink = document.createElement('link');
-       newLink.rel = 'icon';
-       newLink.href = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>";
-       document.head.appendChild(newLink);
     }
   }, []);
 
@@ -531,7 +522,6 @@ export default function App() {
 
   const generatePDF = async () => {
     setIsGeneratingPdf(true);
-    
     window.scrollTo(0, 0);
 
     try {
@@ -636,7 +626,10 @@ export default function App() {
                 <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Страхование груза (1.5%)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effInsurance).toLocaleString()}</td></tr>
               )}
               
-              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Таможенные платежи (Пошлина, Акциз, НДС)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCustomsTotal).toLocaleString()}</td></tr>
+              {/* РАЗБИТАЯ ТАМОЖНЯ В PDF */}
+              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Таможня: Ввозная пошлина (10%)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCustomsDuty).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Таможня: Акцизный сбор</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCustomsExcise).toLocaleString()}</td></tr>
+              <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Таможня: НДС (20%)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCustomsVat).toLocaleString()}</td></tr>
               
               {effFwd > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Экспедирование Клайпеда</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effFwd).toLocaleString()}</td></tr>}
               {effCar > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Автовоз в Украину</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCar).toLocaleString()}</td></tr>}
@@ -661,7 +654,6 @@ export default function App() {
 
       {/* ОСНОВНОЕ ПРИЛОЖЕНИЕ */}
       <div className="relative z-10 bg-[#0F0F0F] min-h-screen pb-10">
-        {/* Header */}
         <header className="bg-black text-white sticky top-0 z-50 border-b border-gray-800 py-4 px-6 flex items-center justify-between shadow-2xl">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-[#FFCC33] text-black rounded-lg flex items-center justify-center transform rotate-3 shadow-[0_0_15px_rgba(255,204,51,0.5)] cursor-pointer">
@@ -922,14 +914,32 @@ export default function App() {
 
                   <div className="h-px bg-gray-800/50" />
 
+                  {/* РАЗБИТЫЙ ТАМОЖЕННЫЙ БЛОК */}
                   <div className="space-y-1">
                     <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Таможня (Customs UA)</div>
                     <PriceItem 
-                      label="Пошлина + Акциз + НДС" 
-                      value={effCustomsTotal} 
+                      label="Ввозная пошлина (10%)" 
+                      value={effCustomsDuty} 
                       editable={editMode}
-                      onValueChange={(val) => handleOverrideChange('customsTotal', val)}
+                      onValueChange={(val) => handleOverrideChange('customsDuty', val)}
+                      subtext={`База: $${Math.round(effAuctionPrice + effAuctionFee + 1600).toLocaleString()}`}
                     />
+                    <PriceItem 
+                      label="Акцизный сбор" 
+                      value={effCustomsExcise} 
+                      editable={editMode}
+                      onValueChange={(val) => handleOverrideChange('customsExcise', val)}
+                    />
+                    <PriceItem 
+                      label="НДС (20%)" 
+                      value={effCustomsVat} 
+                      editable={editMode}
+                      onValueChange={(val) => handleOverrideChange('customsVat', val)}
+                    />
+                    <div className="flex justify-between items-center py-1 mt-2 border-t border-gray-800/50">
+                      <span className="text-[9px] text-gray-500 font-bold uppercase">Сумма таможни</span>
+                      <span className="text-xs font-mono font-bold text-gray-300">${Math.round(effCustomsTotal).toLocaleString()}</span>
+                    </div>
                   </div>
 
                   <div className="h-px bg-gray-800/50" />
