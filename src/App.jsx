@@ -62,70 +62,64 @@ const AUCTIONS = [
 const calculateCopartFee = (price) => {
   const p = parseFloat(price) || 0;
   if (p <= 0) return 0;
-
-  // BUYER FEE — Secured Payment Methods / Non-Clean Title
-  // Источник: copart.com/content/us/en/member-fees-us-licensed-more
+  
+  // Secured Payment Methods (Buyer Fee)
   let buyerFee = 0;
-  if (p < 50)          buyerFee = 1;
-  else if (p < 100)    buyerFee = 1;
-  else if (p < 200)    buyerFee = 25;
-  else if (p < 300)    buyerFee = 60;
-  else if (p < 350)    buyerFee = 85;
-  else if (p < 400)    buyerFee = 100;
-  else if (p < 450)    buyerFee = 125;
-  else if (p < 500)    buyerFee = 135;
-  else if (p < 550)    buyerFee = 145;
-  else if (p < 600)    buyerFee = 155;
-  else if (p < 700)    buyerFee = 170;
-  else if (p < 800)    buyerFee = 195;
-  else if (p < 900)    buyerFee = 215;
-  else if (p < 1000)   buyerFee = 230;
-  else if (p < 1200)   buyerFee = 250;
-  else if (p < 1300)   buyerFee = 270;
-  else if (p < 1400)   buyerFee = 285;
-  else if (p < 1500)   buyerFee = 300;
-  else if (p < 1600)   buyerFee = 315;
-  else if (p < 1700)   buyerFee = 330;
-  else if (p < 1800)   buyerFee = 350;
-  else if (p < 2000)   buyerFee = 370;
-  else if (p < 2400)   buyerFee = 390;
-  else if (p < 2500)   buyerFee = 425;
-  else if (p < 3000)   buyerFee = 460;
-  else if (p < 3500)   buyerFee = 505;
-  else if (p < 4000)   buyerFee = 555;
-  else if (p < 4500)   buyerFee = 600;
-  else if (p < 5000)   buyerFee = 625;
-  else if (p < 5500)   buyerFee = 650;
-  else if (p < 6000)   buyerFee = 675;
-  else if (p < 6500)   buyerFee = 700;
-  else if (p < 7000)   buyerFee = 720;
-  else if (p < 7500)   buyerFee = 755;
-  else if (p < 8000)   buyerFee = 775;
-  else if (p < 8500)   buyerFee = 800;
-  else if (p < 9000)   buyerFee = 820;
-  else if (p < 10000)  buyerFee = 820;
-  else if (p < 10500)  buyerFee = 850;
-  else if (p < 11000)  buyerFee = 850;
-  else if (p < 11500)  buyerFee = 850;
-  else if (p < 12000)  buyerFee = 860;
-  else if (p < 12500)  buyerFee = 875;
-  else if (p < 15000)  buyerFee = 890;
-  else buyerFee = p * 0.06; // 6% of sale price
+  if (p < 100) buyerFee = 1;
+  else if (p < 200) buyerFee = 25;
+  else if (p < 300) buyerFee = 60;
+  else if (p < 350) buyerFee = 85;
+  else if (p < 400) buyerFee = 100;
+  else if (p < 450) buyerFee = 125;
+  else if (p < 500) buyerFee = 135;
+  else if (p < 550) buyerFee = 145;
+  else if (p < 600) buyerFee = 155;
+  else if (p < 700) buyerFee = 170;
+  else if (p < 800) buyerFee = 195;
+  else if (p < 900) buyerFee = 215;
+  else if (p < 1000) buyerFee = 230;
+  else if (p < 1200) buyerFee = 250;
+  else if (p < 1300) buyerFee = 270;
+  else if (p < 1400) buyerFee = 285;
+  else if (p < 1500) buyerFee = 300;
+  else if (p < 1600) buyerFee = 315;
+  else if (p < 1700) buyerFee = 330;
+  else if (p < 1800) buyerFee = 350;
+  else if (p < 2000) buyerFee = 370;
+  else if (p < 2400) buyerFee = 390;
+  else if (p < 2500) buyerFee = 425;
+  else if (p < 3000) buyerFee = 460;
+  else if (p < 3500) buyerFee = 505;
+  else if (p < 4000) buyerFee = 555;
+  else if (p < 4500) buyerFee = 600;
+  else if (p < 5000) buyerFee = 625;
+  else if (p < 5500) buyerFee = 650;
+  else if (p < 6000) buyerFee = 675;
+  else if (p < 6500) buyerFee = 700;
+  else if (p < 7000) buyerFee = 720;
+  else if (p < 7500) buyerFee = 755;
+  else if (p < 8000) buyerFee = 775;
+  else if (p < 8500) buyerFee = 800;
+  else if (p < 10000) buyerFee = 820;
+  else if (p < 11500) buyerFee = 850;
+  else if (p < 12000) buyerFee = 860;
+  else if (p < 12500) buyerFee = 875;
+  else if (p < 15000) buyerFee = 890;
+  else buyerFee = p * 0.06;
 
-  // VIRTUAL BID FEE — Live Bid (онлайн-ставка)
-  // Источник: copart.com/content/us/en/member-fees-us-licensed-more
+  // Virtual Bid Fee (Live Bid)
   let virtualFee = 0;
-  if (p < 100)         virtualFee = 0;
-  else if (p < 500)    virtualFee = 50;
-  else if (p < 1000)   virtualFee = 65;
-  else if (p < 1500)   virtualFee = 85;
-  else if (p < 2000)   virtualFee = 95;
-  else if (p < 4000)   virtualFee = 110;
-  else if (p < 6000)   virtualFee = 125;
-  else if (p < 8000)   virtualFee = 145;
-  else                 virtualFee = 160;
+  if (p < 100) virtualFee = 0;
+  else if (p < 500) virtualFee = 50;
+  else if (p < 1000) virtualFee = 65;
+  else if (p < 1500) virtualFee = 85;
+  else if (p < 2000) virtualFee = 95;
+  else if (p < 4000) virtualFee = 110;
+  else if (p < 6000) virtualFee = 125;
+  else if (p < 8000) virtualFee = 145;
+  else virtualFee = 160;
 
-  // Fixed Fees: Gate $95 + Environmental $15 + Title (FedEx) $20
+  // Fixed Fees: Service (Gate), Environmental, Title Handling
   const gateFee = 95;
   const envFee = 15;
   const titleFee = 20;
@@ -214,38 +208,56 @@ const calculateAuctionFee = (price, auction) => {
   return 750 + (p * 0.045); // fallback
 };
 
-// ОБНОВЛЕННАЯ ФУНКЦИЯ: Теперь таможенная стоимость = Цена покупки + Аукционный сбор + $1600
+// ТАМОЖНЯ УКРАИНА 2026
+// Источник: brokstar.com.ua/spravochniki/stavki-poshliny-i-akciznogo-sbora-na-avto
+//
+// Таможенная база = цена авто + аукционный сбор + $1600 (фиксированный сбор)
+// Пошлина  = таможенная база × 10%
+// Акциз    = базовая ставка (€) × (объём / 1000) × полных лет × курс EUR→USD
+//              Бензин / Гибрид: 50 €/л | Дизель: 75 €/л | Электро: 1 €/кВт мощности
+// НДС      = цена авто × 20%
+// ИТОГО    = пошлина + акциз + НДС
+//
+// Курс EUR→USD: 1.17 (верифицирован на примере из калькулятора)
 const calculateUkraineCustoms = (price, year, volumeCm3, fuelType, auctionFeeValue = 0) => {
   const p = parseFloat(price) || 0;
   const vol = parseFloat(volumeCm3) || 0;
   const fee = parseFloat(auctionFeeValue) || 0;
-  const EUR_TO_USD = 1.08; 
+
+  const EUR_TO_USD = 1.17; // верифицирован на примере: $3575 + $795 + $1600, бензин 2.4л, 2018г → $2436
+  const FIXED_FEE = 1600;  // фиксированный таможенный сбор
+
   const currentYear = new Date().getFullYear();
-  let vehicleAge = currentYear - parseInt(year || currentYear) - 1;
-  vehicleAge = Math.max(1, Math.min(15, vehicleAge)); 
+  // Полных лет = текущий год − год выпуска (минимум 1, максимум 15)
+  let vehicleAge = currentYear - parseInt(year || currentYear);
+  vehicleAge = Math.max(1, Math.min(15, vehicleAge));
 
   if (p === 0) return { duty: 0, excise: 0, vat: 0, total: 0 };
 
+  // Таможенная база для расчёта пошлины
+  const customsBase = p + fee + FIXED_FEE;
+
+  // --- ЭЛЕКТРОМОБИЛЬ ---
+  // Пошлина: 0% | Акциз: 1 €/кВт | НДС: цена × 20%
   if (fuelType === 'electric') {
-    const batteryCapacity = vol < 200 && vol > 0 ? vol : 60; 
-    const excise = batteryCapacity * 1 * EUR_TO_USD; 
-    return { duty: 0, excise, vat: 0, total: excise };
+    const batteryKw = vol > 0 ? vol : 60;
+    const excise = batteryKw * 1 * EUR_TO_USD;
+    const duty = 0;
+    const vat = p * 0.20;
+    return { duty, excise, vat, total: duty + excise + vat };
   }
 
-  // Таможенная стоимость = Цена покупки + Аукционный сбор + $1600
-  const customsBase = p + fee + 1600;
-
+  // --- БЕНЗИН / ДИЗЕЛЬ / ГИБРИД ---
+  // Пошлина = таможенная база × 10%
   const duty = customsBase * 0.10;
-  let excise = 0;
 
-  if (fuelType === 'hybrid') {
-    excise = 100 * EUR_TO_USD;
-  } else {
-    let baseRate = (fuelType === 'petrol') ? (vol <= 3000 ? 50 : 100) : (vol <= 3500 ? 75 : 150);
-    excise = baseRate * (vol / 1000) * vehicleAge * EUR_TO_USD;
-  }
+  // Акциз = ставка (€/л) × (объём / 1000) × лет × курс
+  const baseRateEur = fuelType === 'diesel' ? 75 : 50; // бензин и гибрид = 50€
+  const excise = baseRateEur * (vol / 1000) * vehicleAge * EUR_TO_USD;
 
-  const vat = (customsBase + duty + excise) * 0.20;
+  // НДС = цена авто × 20%
+  const vat = p * 0.20;
+
   return { duty, excise, vat, total: duty + excise + vat };
 };
 
