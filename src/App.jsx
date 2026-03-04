@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 
 
+
 // --- ТАРИФЫ МОРСКОГО ФРАХТА ---
 const OCEAN_FREIGHT_BASE = {
   nj: { klp: 575, od: 1250, poti: 1350 },
@@ -327,10 +328,10 @@ const SearchableSelect = ({ options, value, onChange, placeholder }) => {
   );
 };
 
-const PriceItem = ({ label, value, highlight = false, subtext, editable = false, onValueChange }) => (
+const PriceItem = ({ label, value, highlight = false, subtext, editable = false, onValueChange, size = 'normal' }) => (
   <div className="flex justify-between items-center py-1 group rounded-lg px-2 -mx-2 transition-colors">
     <div>
-      <div className="text-xs text-gray-400 font-medium">{label}</div>
+      <div className={`${size === 'small' ? 'text-[10px]' : 'text-xs'} text-gray-400 font-medium`}>{label}</div>
       {subtext && <div className="text-[9px] text-gray-600 font-bold">{subtext}</div>}
     </div>
     <div className="flex items-center">
@@ -346,7 +347,7 @@ const PriceItem = ({ label, value, highlight = false, subtext, editable = false,
           />
         </div>
       ) : (
-        <div className={`text-sm font-mono font-bold ${highlight ? 'text-red-500' : 'text-white'}`}>
+        <div className={`font-mono font-bold ${size === 'small' ? 'text-xs' : 'text-sm'} ${highlight ? 'text-red-500' : 'text-white'}`}>
           {value === null || value === undefined ? '—' : `$${Math.round(value).toLocaleString()}`}
         </div>
       )}
@@ -381,6 +382,7 @@ export default function App() {
   const [extraFees, setExtraFees] = useState({
     forwarding: '',
     carrier: '',
+    evacuator: '350',
     broker: '',
     dealer: ''
   });
@@ -452,6 +454,7 @@ export default function App() {
   const parsedCar = parseFloat(extraFees.carrier) || 0;
   const parsedBrk = parseFloat(extraFees.broker) || 0;
   const parsedDlr = parseFloat(extraFees.dealer) || 0;
+  const parsedEvac = parseFloat(extraFees.evacuator !== undefined ? extraFees.evacuator : 350) || 0;
 
   // Эффективные значения с учетом возможных ручных переопределений
   const effAuctionPrice = overrides.auctionPrice !== undefined ? overrides.auctionPrice : (parseFloat(auctionPrice) || 0);
@@ -471,10 +474,11 @@ export default function App() {
   const effCar = overrides.car !== undefined ? overrides.car : parsedCar;
   const effBrk = overrides.brk !== undefined ? overrides.brk : parsedBrk;
   const effDlr = overrides.dlr !== undefined ? overrides.dlr : parsedDlr;
+  const effEvac = overrides.evac !== undefined ? overrides.evac : parsedEvac;
 
   const effTotalCost = useMemo(() => {
-    return effAuctionPrice + effAuctionFee + effLandCost + effOceanCost + effDangerousGoodsFee + effInsurance + effCustomsTotal + effFwd + effCar + effBrk + effDlr;
-  }, [effAuctionPrice, effAuctionFee, effLandCost, effOceanCost, effDangerousGoodsFee, effInsurance, effCustomsTotal, effFwd, effCar, effBrk, effDlr]);
+    return effAuctionPrice + effAuctionFee + effLandCost + effOceanCost + effDangerousGoodsFee + effInsurance + effCustomsTotal + effFwd + effCar + effBrk + effDlr + effEvac;
+  }, [effAuctionPrice, effAuctionFee, effLandCost, effOceanCost, effDangerousGoodsFee, effInsurance, effCustomsTotal, effFwd, effCar, effBrk, effDlr, effEvac]);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('w8_pro_history');
@@ -482,7 +486,11 @@ export default function App() {
 
     const savedFees = localStorage.getItem('w8_extra_fees');
     if (savedFees) {
-      try { setExtraFees(JSON.parse(savedFees)); } catch(e) {}
+      try { 
+        const parsed = JSON.parse(savedFees);
+        // Загружаем сохраненные данные, но если эвакуатора там нет (старые данные), оставляем 350
+        setExtraFees(prev => ({ ...prev, ...parsed }));
+      } catch(e) {}
     }
   }, []);
 
@@ -655,8 +663,15 @@ export default function App() {
               <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Таможня: Акцизный сбор</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCustomsExcise).toLocaleString()}</td></tr>
               <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Таможня: НДС (20%)</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCustomsVat).toLocaleString()}</td></tr>
               
+              {/* СУММА ТАМОЖНИ ВЫДЕЛЕНА В PDF */}
+              <tr style={{ backgroundColor: '#f9fafb' }}>
+                <td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', fontWeight: 'bold' }}>Сумма таможни</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 'bold', fontFamily: 'monospace', fontSize: '14px' }}>${Math.round(effCustomsTotal).toLocaleString()}</td>
+              </tr>
+              
               {effFwd > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Экспедирование Клайпеда</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effFwd).toLocaleString()}</td></tr>}
               {effCar > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Автовоз в Украину</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCar).toLocaleString()}</td></tr>}
+              {effEvac > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Эвакуатор в Одессу</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effEvac).toLocaleString()}</td></tr>}
               {effBrk > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Брокерские услуги</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effBrk).toLocaleString()}</td></tr>}
               {effDlr > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Комиссия дилера</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effDlr).toLocaleString()}</td></tr>}
             </tbody>
@@ -831,6 +846,16 @@ export default function App() {
                     className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer shadow-inner" 
                   />
                 </InputWrapper>
+
+                <InputWrapper label="Эвакуатор в Одессу ($)" icon={Truck}>
+                  <input 
+                    type="number" 
+                    value={extraFees.evacuator} 
+                    onChange={(e) => handleExtraFeeChange('evacuator', e.target.value)} 
+                    placeholder="350" 
+                    className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer shadow-inner" 
+                  />
+                </InputWrapper>
                 
                 <InputWrapper label="Брокер ($)" icon={FileText}>
                   <input 
@@ -954,22 +979,25 @@ export default function App() {
                       editable={editMode}
                       onValueChange={(val) => handleOverrideChange('customsDuty', val)}
                       subtext={`База: $${Math.round(effAuctionPrice + effAuctionFee + 1600).toLocaleString()}`}
+                      size="small"
                     />
                     <PriceItem 
                       label="Акцизный сбор" 
                       value={effCustomsExcise} 
                       editable={editMode}
                       onValueChange={(val) => handleOverrideChange('customsExcise', val)}
+                      size="small"
                     />
                     <PriceItem 
                       label="НДС (20%)" 
                       value={effCustomsVat} 
                       editable={editMode}
                       onValueChange={(val) => handleOverrideChange('customsVat', val)}
+                      size="small"
                     />
-                    <div className="flex justify-between items-center py-1 mt-2 border-t border-gray-800/50">
-                      <span className="text-[9px] text-gray-500 font-bold uppercase">Сумма таможни</span>
-                      <span className="text-xs font-mono font-bold text-gray-300">${Math.round(effCustomsTotal).toLocaleString()}</span>
+                    <div className="flex justify-between items-center py-2 mt-2 border-t border-gray-700">
+                      <span className="text-[11px] text-white font-bold uppercase tracking-wider">Сумма таможни</span>
+                      <span className="text-xl font-mono font-black text-[#FFCC33]">${Math.round(effCustomsTotal).toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -979,6 +1007,7 @@ export default function App() {
                     <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Локальные расходы и услуги</div>
                     {(effFwd > 0 || editMode) && <PriceItem label="Экспедирование Клайпеда" value={effFwd} editable={editMode} onValueChange={(val) => handleOverrideChange('fwd', val)} />}
                     {(effCar > 0 || editMode) && <PriceItem label="Автовоз в Украину" value={effCar} editable={editMode} onValueChange={(val) => handleOverrideChange('car', val)} />}
+                    {(effEvac > 0 || editMode) && <PriceItem label="Эвакуатор в Одессу" value={effEvac} editable={editMode} onValueChange={(val) => handleOverrideChange('evac', val)} />}
                     {(effBrk > 0 || editMode) && <PriceItem label="Брокерские услуги" value={effBrk} editable={editMode} onValueChange={(val) => handleOverrideChange('brk', val)} />}
                     {(effDlr > 0 || editMode) && <PriceItem label="Комиссия дилера" value={effDlr} editable={editMode} onValueChange={(val) => handleOverrideChange('dlr', val)} />}
                   </div>
