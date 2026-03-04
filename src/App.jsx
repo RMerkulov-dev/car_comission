@@ -400,11 +400,8 @@ export default function App() {
   const [editMode, setEditMode] = useState(false);
   const [overrides, setOverrides] = useState({});
 
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-
   // Валютный курс НБУ
   const [eurToUsdRate, setEurToUsdRate] = useState(1.15); // Дефолтный курс, если API не ответит
-  const [usdToUahRate, setUsdToUahRate] = useState(41.5); // Курс доллара к гривне
   const [isRateLoading, setIsRateLoading] = useState(true);
 
   useEffect(() => {
@@ -416,13 +413,10 @@ export default function App() {
         const usdData = data.find(c => c.cc === 'USD');
         const eurData = data.find(c => c.cc === 'EUR');
 
-        if (usdData) {
-          setUsdToUahRate(usdData.rate);
-          if (eurData) {
-            // Кросс-курс: Стоимость 1 Евро в Гривнах / Стоимость 1 Доллара в Гривнах = Стоимость 1 Евро в Долларах
-            const crossRate = eurData.rate / usdData.rate;
-            setEurToUsdRate(crossRate);
-          }
+        if (usdData && eurData) {
+          // Кросс-курс: Стоимость 1 Евро в Гривнах / Стоимость 1 Доллара в Гривнах = Стоимость 1 Евро в Долларах
+          const crossRate = eurData.rate / usdData.rate;
+          setEurToUsdRate(crossRate);
         }
       } catch (error) {
         console.error('Ошибка при получении курсов валют НБУ. Используется резервный курс.', error);
@@ -542,29 +536,6 @@ export default function App() {
     const newDest = e.target.value;
     setDestPort(newDest);
     autoSelectCheapestPort(selectedCity, newDest, auctionType);
-  };
-
-  const executeReset = () => {
-    setVehicleType('sedan');
-    setAuctionPrice('');
-    setAuctionType('copart');
-    setSelectedCity('');
-    setExitPort('nj');
-    setDestPort('klp');
-    setProdYear('2020');
-    setEngineVolume('2000');
-    setFuelType('petrol');
-    setExtraFees({
-      forwarding: '',
-      carrier: '',
-      evacuator: '350',
-      broker: '',
-      dealer: ''
-    });
-    setInsuranceEnabled(true);
-    setEditMode(false);
-    setOverrides({});
-    setShowResetConfirm(false);
   };
 
   const saveToHistory = () => {
@@ -711,7 +682,6 @@ export default function App() {
             <div style={{ backgroundColor: '#FFCC33', padding: '15px 25px', borderRadius: '12px', textAlign: 'right', color: '#000' }}>
               <div style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>ИТОГО</div>
               <div style={{ fontSize: '32px', fontWeight: '900', fontFamily: 'monospace', lineHeight: 1 }}>${Math.round(effTotalCost).toLocaleString()}</div>
-              <div style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '5px', opacity: 0.8 }}>≈ {Math.round(effTotalCost * usdToUahRate).toLocaleString()} ₴</div>
             </div>
           </div>
           
@@ -1047,9 +1017,6 @@ export default function App() {
                     <div className="text-5xl font-black text-[#FFCC33] font-mono leading-none tracking-tighter">
                       ${Math.round(effTotalCost).toLocaleString()}
                     </div>
-                    <div className="text-sm font-bold text-gray-500 font-mono mt-2">
-                      ≈ {Math.round(effTotalCost * usdToUahRate).toLocaleString()} ₴
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1057,25 +1024,15 @@ export default function App() {
               {/* BUTTONS */}
               <div className="p-6 pt-0 flex gap-3">
                 <button 
-                  onClick={() => setShowResetConfirm(true)}
-                  title="Сбросить всё"
-                  className="flex-1 bg-[#1F1F1F] hover:bg-red-500/10 text-gray-500 hover:text-red-400 font-bold py-4 rounded-2xl transition-all hover:scale-[1.02] active:scale-95 border border-gray-800 hover:border-red-900/50 cursor-pointer uppercase text-[9px] tracking-[0.1em] flex flex-col items-center justify-center gap-1"
-                >
-                  <Trash2 size={18} />
-                  <span className="hidden sm:inline">Очистить</span>
-                  <span className="sm:hidden">Сброс</span>
-                </button>
-                <button 
                   onClick={() => setModalMode('save')}
-                  className="flex-1 bg-[#1F1F1F] hover:bg-[#333] text-white font-bold py-4 rounded-2xl transition-all hover:scale-[1.02] active:scale-95 border border-gray-700 cursor-pointer uppercase text-[9px] tracking-[0.1em] flex flex-col items-center justify-center gap-1"
+                  className="flex-1 bg-[#1F1F1F] hover:bg-[#333] text-white font-bold py-4 rounded-2xl transition-all hover:scale-[1.02] active:scale-95 border border-gray-700 cursor-pointer uppercase text-[10px] tracking-[0.1em] flex flex-col items-center justify-center gap-1"
                 >
                   <Save size={18} />
-                  <span className="hidden sm:inline">В историю</span>
-                  <span className="sm:hidden">Сохранить</span>
+                  <span>В историю</span>
                 </button>
                 <button 
                   onClick={() => setModalMode('pdf')}
-                  className="flex-[2] bg-[#FFCC33] hover:bg-[#E6B82E] text-black font-black py-4 rounded-2xl transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-[#FFCC33]/10 cursor-pointer uppercase text-[10px] sm:text-[11px] tracking-[0.1em] flex flex-col items-center justify-center gap-1"
+                  className="flex-[2] bg-[#FFCC33] hover:bg-[#E6B82E] text-black font-black py-4 rounded-2xl transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-[#FFCC33]/10 cursor-pointer uppercase text-[11px] tracking-[0.1em] flex flex-col items-center justify-center gap-1"
                 >
                   <FileText size={18} />
                   <span>Скачать PDF</span>
@@ -1138,31 +1095,6 @@ export default function App() {
                   </>
                 )}
               </button>
-            </div>
-          </div>
-        )}
-
-        {/* RESET CONFIRM MODAL */}
-        {showResetConfirm && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/95 backdrop-blur-sm cursor-pointer" onClick={() => setShowResetConfirm(false)} />
-            <div className="bg-[#161616] border border-gray-800 rounded-[2.5rem] p-8 w-full max-w-sm relative z-10 shadow-2xl text-center">
-              <h3 className="text-xl font-bold text-white mb-4 uppercase tracking-widest">Очистить данные?</h3>
-              <p className="text-gray-400 text-sm mb-8">Все введенные параметры будут сброшены. Это действие нельзя отменить.</p>
-              <div className="flex gap-4">
-                <button 
-                  onClick={() => setShowResetConfirm(false)}
-                  className="flex-1 bg-[#1F1F1F] hover:bg-[#333] text-white font-bold py-4 rounded-2xl transition-all cursor-pointer uppercase text-xs"
-                >
-                  Отмена
-                </button>
-                <button 
-                  onClick={executeReset}
-                  className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold py-4 rounded-2xl border border-red-500/20 transition-all cursor-pointer uppercase text-xs"
-                >
-                  Очистить
-                </button>
-              </div>
             </div>
           </div>
         )}
