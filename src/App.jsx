@@ -680,7 +680,7 @@ export default function App() {
           {/* Total Block */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '15px' }}>
             <div style={{ backgroundColor: '#FFCC33', padding: '15px 25px', borderRadius: '12px', textAlign: 'right', color: '#000' }}>
-              <div style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Итого под ключ</div>
+              <div style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>ИТОГО</div>
               <div style={{ fontSize: '32px', fontWeight: '900', fontFamily: 'monospace', lineHeight: 1 }}>${Math.round(effTotalCost).toLocaleString()}</div>
             </div>
           </div>
@@ -1013,7 +1013,7 @@ export default function App() {
                   </div>
 
                   <div className="pt-6 mt-6 border-t border-gray-800">
-                    <div className="text-[10px] font-bold text-gray-500 uppercase mb-2">ИТОГО ПОД КЛЮЧ</div>
+                    <div className="text-[10px] font-bold text-gray-500 uppercase mb-2">ИТОГО</div>
                     <div className="text-5xl font-black text-[#FFCC33] font-mono leading-none tracking-tighter">
                       ${Math.round(effTotalCost).toLocaleString()}
                     </div>
