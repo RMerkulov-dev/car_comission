@@ -221,8 +221,8 @@ const calculateUkraineCustoms = (price, year, volumeCm3, fuelType, auctionFeeVal
     duty = 0;
     const batteryKw = vol > 0 ? vol : 60; // Если объем пустой, ставим 60 кВт как базу
     excise = batteryKw * 1 * EUR_TO_USD;
-    // В Украине НДС на электромобили сейчас равен 0%
-    vat = 0;
+    // НДС 20% от (Таможенная стоимость + Акциз)
+    vat = (customsBase + excise) * 0.20;
   } else {
     // Автомобили с ДВС (Бензин, Дизель) + Гибриды (считаются таможней как бензин)
     duty = customsBase * 0.10;
