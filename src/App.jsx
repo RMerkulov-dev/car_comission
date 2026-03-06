@@ -403,6 +403,25 @@ export default function App() {
   const [isRateLoading, setIsRateLoading] = useState(true);
 
   useEffect(() => {
+    // --- ИНТЕГРАЦИЯ С TELEGRAM WEB APP ---
+    const initTelegram = () => {
+      if (window.Telegram && window.Telegram.WebApp) {
+        const tg = window.Telegram.WebApp;
+        tg.ready(); // Говорим Telegram, что приложение готово
+        tg.expand(); // Разворачиваем калькулятор на всю высоту экрана телефона
+      }
+    };
+
+    if (!window.Telegram) {
+      const script = document.createElement('script');
+      script.src = 'https://telegram.org/js/telegram-web-app.js';
+      script.onload = initTelegram;
+      document.head.appendChild(script);
+    } else {
+      initTelegram();
+    }
+    // --------------------------------------
+
     const fetchNbuRates = async () => {
       try {
         const response = await fetch('https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json');
