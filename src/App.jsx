@@ -381,6 +381,18 @@ export default function App() {
     broker: '',
     dealer: ''
   });
+
+  // Custom user-defined extra items
+  const [customItems, setCustomItems] = useState([]);
+
+  // Editable labels for fixed section-3 fields
+  const [extraFeeLabels, setExtraFeeLabels] = useState({
+    forwarding: 'Экспедирование Клайпеда ($)',
+    carrier: 'Автовоз в Украину ($)',
+    evacuator: 'Эвакуатор в Одессу ($)',
+    broker: 'Брокер ($)',
+    dealer: 'Диллер (Комиссия) ($)',
+  });
   
   const [insuranceEnabled, setInsuranceEnabled] = useState(true);
 
@@ -496,9 +508,11 @@ export default function App() {
   const effDlr = overrides.dlr !== undefined ? overrides.dlr : parsedDlr;
   const effEvac = overrides.evac !== undefined ? overrides.evac : parsedEvac;
 
+  const customItemsTotal = customItems.reduce((sum, item) => sum + (parseFloat(item.value) || 0), 0);
+
   const effTotalCost = useMemo(() => {
-    return effAuctionPrice + effAuctionFee + effLandCost + effOceanCost + effDangerousGoodsFee + effInsurance + effCustomsTotal + effFwd + effCar + effBrk + effDlr + effEvac;
-  }, [effAuctionPrice, effAuctionFee, effLandCost, effOceanCost, effDangerousGoodsFee, effInsurance, effCustomsTotal, effFwd, effCar, effBrk, effDlr, effEvac]);
+    return effAuctionPrice + effAuctionFee + effLandCost + effOceanCost + effDangerousGoodsFee + effInsurance + effCustomsTotal + effFwd + effCar + effBrk + effDlr + effEvac + customItemsTotal;
+  }, [effAuctionPrice, effAuctionFee, effLandCost, effOceanCost, effDangerousGoodsFee, effInsurance, effCustomsTotal, effFwd, effCar, effBrk, effDlr, effEvac, customItemsTotal]);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('w8_pro_history');
@@ -506,11 +520,20 @@ export default function App() {
 
     const savedFees = localStorage.getItem('w8_extra_fees');
     if (savedFees) {
-      try { 
+      try {
         const parsed = JSON.parse(savedFees);
-        // Загружаем сохраненные данные, но если эвакуатора там нет (старые данные), оставляем 350
         setExtraFees(prev => ({ ...prev, ...parsed }));
       } catch(e) {}
+    }
+
+    const savedCustom = localStorage.getItem('w8_custom_items');
+    if (savedCustom) {
+      try { setCustomItems(JSON.parse(savedCustom)); } catch(e) {}
+    }
+
+    const savedLabels = localStorage.getItem('w8_extra_fee_labels');
+    if (savedLabels) {
+      try { setExtraFeeLabels(prev => ({ ...prev, ...JSON.parse(savedLabels) })); } catch(e) {}
     }
   }, []);
 
@@ -518,6 +541,30 @@ export default function App() {
     const newFees = { ...extraFees, [field]: value };
     setExtraFees(newFees);
     localStorage.setItem('w8_extra_fees', JSON.stringify(newFees));
+  };
+
+  const handleExtraFeeLabelChange = (field, value) => {
+    const newLabels = { ...extraFeeLabels, [field]: value };
+    setExtraFeeLabels(newLabels);
+    localStorage.setItem('w8_extra_fee_labels', JSON.stringify(newLabels));
+  };
+
+  const addCustomItem = () => {
+    const newItems = [...customItems, { id: Date.now().toString(), label: '', value: '' }];
+    setCustomItems(newItems);
+    localStorage.setItem('w8_custom_items', JSON.stringify(newItems));
+  };
+
+  const updateCustomItem = (id, field, value) => {
+    const newItems = customItems.map(item => item.id === id ? { ...item, [field]: value } : item);
+    setCustomItems(newItems);
+    localStorage.setItem('w8_custom_items', JSON.stringify(newItems));
+  };
+
+  const removeCustomItem = (id) => {
+    const newItems = customItems.filter(item => item.id !== id);
+    setCustomItems(newItems);
+    localStorage.setItem('w8_custom_items', JSON.stringify(newItems));
   };
 
   const handleOverrideChange = (key, val) => {
@@ -712,11 +759,14 @@ export default function App() {
                 <td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 'bold', fontFamily: 'monospace', fontSize: '14px' }}>${Math.round(effCustomsTotal).toLocaleString()}</td>
               </tr>
               
-              {effFwd > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Экспедирование Клайпеда</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effFwd).toLocaleString()}</td></tr>}
-              {effCar > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Автовоз в Украину</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCar).toLocaleString()}</td></tr>}
-              {effEvac > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Эвакуатор в Одессу</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effEvac).toLocaleString()}</td></tr>}
-              {effBrk > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Брокерские услуги</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effBrk).toLocaleString()}</td></tr>}
-              {effDlr > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>Комиссия дилера</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effDlr).toLocaleString()}</td></tr>}
+              {effFwd > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>{extraFeeLabels.forwarding}</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effFwd).toLocaleString()}</td></tr>}
+              {effCar > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>{extraFeeLabels.carrier}</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effCar).toLocaleString()}</td></tr>}
+              {effEvac > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>{extraFeeLabels.evacuator}</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effEvac).toLocaleString()}</td></tr>}
+              {effBrk > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>{extraFeeLabels.broker}</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effBrk).toLocaleString()}</td></tr>}
+              {effDlr > 0 && <tr><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>{extraFeeLabels.dealer}</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(effDlr).toLocaleString()}</td></tr>}
+              {customItems.filter(item => (parseFloat(item.value) || 0) > 0).map(item => (
+                <tr key={item.id}><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>{item.label || 'Доп. расход'}</td><td style={{ padding: '8px', borderBottom: '1px solid #e5e7eb', textAlign: 'right', fontFamily: 'monospace' }}>${Math.round(parseFloat(item.value)).toLocaleString()}</td></tr>
+              ))}
             </tbody>
           </table>
 
@@ -871,56 +921,83 @@ export default function App() {
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InputWrapper label="Экспедирование Клайпеда ($)" icon={Anchor}>
-                  <input 
-                    type="number" 
-                    value={extraFees.forwarding} 
-                    onChange={(e) => handleExtraFeeChange('forwarding', e.target.value)} 
-                    placeholder="0" 
-                    className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer shadow-inner" 
-                  />
-                </InputWrapper>
-
-                <InputWrapper label="Автовоз в Украину ($)" icon={Truck}>
-                  <input 
-                    type="number" 
-                    value={extraFees.carrier} 
-                    onChange={(e) => handleExtraFeeChange('carrier', e.target.value)} 
-                    placeholder="0" 
-                    className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer shadow-inner" 
-                  />
-                </InputWrapper>
-
-                <InputWrapper label="Эвакуатор в Одессу ($)" icon={Truck}>
-                  <input 
-                    type="number" 
-                    value={extraFees.evacuator} 
-                    onChange={(e) => handleExtraFeeChange('evacuator', e.target.value)} 
-                    placeholder="350" 
-                    className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer shadow-inner" 
-                  />
-                </InputWrapper>
-                
-                <InputWrapper label="Брокер ($)" icon={FileText}>
-                  <input 
-                    type="number" 
-                    value={extraFees.broker} 
-                    onChange={(e) => handleExtraFeeChange('broker', e.target.value)} 
-                    placeholder="0" 
-                    className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer shadow-inner" 
-                  />
-                </InputWrapper>
-                
-                <InputWrapper label="Диллер (Комиссия) ($)" icon={User}>
-                  <input 
-                    type="number" 
-                    value={extraFees.dealer} 
-                    onChange={(e) => handleExtraFeeChange('dealer', e.target.value)} 
-                    placeholder="0" 
-                    className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer shadow-inner" 
-                  />
-                </InputWrapper>
+                {[
+                  { field: 'forwarding', icon: Anchor, placeholder: '0', feeKey: 'forwarding' },
+                  { field: 'carrier',    icon: Truck,   placeholder: '0', feeKey: 'carrier' },
+                  { field: 'evacuator',  icon: Truck,   placeholder: '350', feeKey: 'evacuator' },
+                  { field: 'broker',     icon: FileText, placeholder: '0', feeKey: 'broker' },
+                  { field: 'dealer',     icon: User,    placeholder: '0', feeKey: 'dealer' },
+                ].map(({ field, icon: Icon, placeholder }) => (
+                  <div key={field} className="space-y-2">
+                    <label className="flex items-center gap-2 px-1 group/label">
+                      <Icon size={12} className="text-[#FFCC33] flex-shrink-0" />
+                      <input
+                        type="text"
+                        value={extraFeeLabels[field]}
+                        onChange={(e) => handleExtraFeeLabelChange(field, e.target.value)}
+                        className="bg-transparent outline-none text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-gray-300 focus:text-[#FFCC33] border-b border-transparent focus:border-[#FFCC33]/40 transition-all w-full cursor-text pb-px"
+                      />
+                    </label>
+                    <input
+                      type="number"
+                      value={extraFees[field]}
+                      onChange={(e) => handleExtraFeeChange(field, e.target.value)}
+                      placeholder={placeholder}
+                      className="w-full bg-[#1F1F1F] border border-gray-800 rounded-xl px-4 py-3 outline-none font-bold text-white focus:border-[#FFCC33] cursor-pointer shadow-inner"
+                    />
+                  </div>
+                ))}
               </div>
+
+              {/* CUSTOM ITEMS */}
+              {customItems.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-700 to-transparent" />
+                    <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500">Дополнительно</span>
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-700 to-transparent" />
+                  </div>
+                  <div className="space-y-2">
+                    {customItems.map((item) => (
+                      <div key={item.id} className="group flex items-center gap-2 bg-[#1A1A1A] rounded-2xl p-2 border border-gray-800/60 hover:border-gray-700 transition-all">
+                        <div className="w-2 h-2 rounded-full bg-[#FFCC33]/40 flex-shrink-0 ml-1" />
+                        <input
+                          type="text"
+                          value={item.label}
+                          onChange={(e) => updateCustomItem(item.id, 'label', e.target.value)}
+                          placeholder="Название расхода"
+                          className="flex-1 min-w-0 bg-transparent outline-none text-[11px] font-bold text-white placeholder:text-gray-600 cursor-pointer"
+                        />
+                        <div className="flex items-center gap-1 bg-[#111] rounded-xl px-3 py-2 border border-gray-800 flex-shrink-0">
+                          <span className="text-[#FFCC33]/60 text-xs font-bold">$</span>
+                          <input
+                            type="number"
+                            value={item.value}
+                            onChange={(e) => updateCustomItem(item.id, 'value', e.target.value)}
+                            placeholder="0"
+                            className="w-20 bg-transparent outline-none text-sm font-black text-white text-right cursor-pointer"
+                          />
+                        </div>
+                        <button
+                          onClick={() => removeCustomItem(item.id)}
+                          className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ADD BUTTON */}
+              <button
+                onClick={addCustomItem}
+                className="w-full mt-2 flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-gray-700 hover:border-[#FFCC33]/50 text-gray-500 hover:text-[#FFCC33] text-[11px] font-bold uppercase tracking-[0.15em] transition-all hover:bg-[#FFCC33]/5 cursor-pointer group"
+              >
+                <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-base leading-none group-hover:bg-[#FFCC33]/10 transition-all">+</span>
+                Добавить расход
+              </button>
             </div>
 
           </div>
@@ -1049,11 +1126,14 @@ export default function App() {
 
                   <div className="space-y-1">
                     <div className="text-[9px] text-gray-500 font-bold uppercase mb-1">Локальные расходы и услуги</div>
-                    {(effFwd > 0 || editMode) && <PriceItem label="Экспедирование Клайпеда" value={effFwd} editable={editMode} onValueChange={(val) => handleOverrideChange('fwd', val)} />}
-                    {(effCar > 0 || editMode) && <PriceItem label="Автовоз в Украину" value={effCar} editable={editMode} onValueChange={(val) => handleOverrideChange('car', val)} />}
-                    {(effEvac > 0 || editMode) && <PriceItem label="Эвакуатор в Одессу" value={effEvac} editable={editMode} onValueChange={(val) => handleOverrideChange('evac', val)} />}
-                    {(effBrk > 0 || editMode) && <PriceItem label="Брокерские услуги" value={effBrk} editable={editMode} onValueChange={(val) => handleOverrideChange('brk', val)} />}
-                    {(effDlr > 0 || editMode) && <PriceItem label="Комиссия дилера" value={effDlr} editable={editMode} onValueChange={(val) => handleOverrideChange('dlr', val)} />}
+                    {(effFwd > 0 || editMode) && <PriceItem label={extraFeeLabels.forwarding} value={effFwd} editable={editMode} onValueChange={(val) => handleOverrideChange('fwd', val)} />}
+                    {(effCar > 0 || editMode) && <PriceItem label={extraFeeLabels.carrier} value={effCar} editable={editMode} onValueChange={(val) => handleOverrideChange('car', val)} />}
+                    {(effEvac > 0 || editMode) && <PriceItem label={extraFeeLabels.evacuator} value={effEvac} editable={editMode} onValueChange={(val) => handleOverrideChange('evac', val)} />}
+                    {(effBrk > 0 || editMode) && <PriceItem label={extraFeeLabels.broker} value={effBrk} editable={editMode} onValueChange={(val) => handleOverrideChange('brk', val)} />}
+                    {(effDlr > 0 || editMode) && <PriceItem label={extraFeeLabels.dealer} value={effDlr} editable={editMode} onValueChange={(val) => handleOverrideChange('dlr', val)} />}
+                    {customItems.filter(item => (parseFloat(item.value) || 0) > 0 || item.label).map(item => (
+                      <PriceItem key={item.id} label={item.label || 'Доп. расход'} value={parseFloat(item.value) || 0} />
+                    ))}
                   </div>
 
                   <div className="pt-6 mt-6 border-t border-gray-800">
