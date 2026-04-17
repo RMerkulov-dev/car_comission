@@ -3,8 +3,8 @@ import { SHIPPING_DATA } from './assets/shipping_data';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  MapPin, Calculator, DollarSign, Save, Trash2, History, Anchor, 
-  Truck, Car, Tag, Info, X, ShieldCheck, Ship, 
+  MapPin, Calculator, DollarSign, Save, Trash2, History, Anchor,
+  Truck, Car, Tag, Info, X, ShieldCheck, Ship, Plus,
   Zap, Fuel, Calendar, Globe, Download, FileText, User, Search, ChevronDown, Activity
 } from 'lucide-react';
 
@@ -995,7 +995,7 @@ export default function App() {
                 onClick={addCustomItem}
                 className="w-full mt-2 flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-gray-700 hover:border-[#FFCC33]/50 text-gray-500 hover:text-[#FFCC33] text-[11px] font-bold uppercase tracking-[0.15em] transition-all hover:bg-[#FFCC33]/5 cursor-pointer group"
               >
-                <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-base leading-none group-hover:bg-[#FFCC33]/10 transition-all">+</span>
+                <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center group-hover:bg-[#FFCC33]/10 transition-all"><Plus size={10} /></span>
                 Добавить расход
               </button>
             </div>
